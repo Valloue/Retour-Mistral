@@ -232,30 +232,24 @@
                 editor.innerHTML = `
                     <div class="editor-content">
                         <div class="editor-toolbar">
-                            <div class="toolbar-group">
-                                <button onclick="document.execCommand('bold', false, null)" title="Gras"><strong>B</strong></button>
-                                <button onclick="document.execCommand('italic', false, null)" title="Italique"><em>I</em></button>
-                                <button onclick="document.execCommand('underline', false, null)" title="Souligné"><u>U</u></button>
-                            </div>
-                            <div class="toolbar-group">
-                                <button onclick="document.execCommand('insertUnorderedList', false, null)" title="Liste à puces">•</button>
-                                <button onclick="document.execCommand('insertOrderedList', false, null)" title="Liste numérotée">1.</button>
-                                <button onclick="document.execCommand('indent', false, null)" title="Augmenter le retrait">→</button>
-                                <button onclick="document.execCommand('outdent', false, null)" title="Diminuer le retrait">←</button>
-                            </div>
-                            <div class="toolbar-group">
-                                <button onclick="document.execCommand('justifyLeft', false, null)" title="Aligner à gauche">⫷</button>
-                                <button onclick="document.execCommand('justifyCenter', false, null)" title="Centrer">⫶</button>
-                                <button onclick="document.execCommand('justifyRight', false, null)" title="Aligner à droite">⫸</button>
-                            </div>
+                            <button onclick="formatDoc('bold')" title="Gras">B</button>
+                            <button onclick="formatDoc('italic')" title="Italique">I</button>
+                            <button onclick="formatDoc('underline')" title="Souligné">U</button>
+                            <button onclick="formatDoc('insertunorderedlist')" title="Liste à puces">•</button>
+                            <button onclick="formatDoc('insertorderedlist')" title="Liste numérotée">1.</button>
                         </div>
                         <div id="activityContent" 
                              class="editable-content" 
-                             contenteditable="true" 
-                             placeholder="Saisissez les détails de l'activité ici..."
+                             contenteditable="true"
                         >${activityData.content || ''}</div>
                     </div>
                 `;
+
+                // Fonction de formatage
+                window.formatDoc = function(cmd) {
+                    document.execCommand(cmd, false, null);
+                    document.getElementById('activityContent').focus();
+                };
 
                 // Ajouter l'écouteur d'événements pour la sauvegarde automatique
                 const contentDiv = document.getElementById('activityContent');
