@@ -10,6 +10,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 </head>
 <body>
     <nav class="navbar">
@@ -230,37 +231,67 @@
                 // Créer et configurer la zone de texte
                 const editor = document.getElementById('editor');
                 editor.innerHTML = `
-                    <textarea 
-                        id="activityContent" 
-                        style="width: 100%; height: 400px; padding: 12px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"
-                        placeholder="Saisissez les détails de l'activité ici..."
-                    >${activityData.content || ''}</textarea>
+                    <div class="editor-toolbar">
+                        <div class="editor-group">
+                            <select class="font-select">
+                                <option value="Arial">Arial</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Calibri">Calibri</option>
+                            </select>
+                            <select class="font-size">
+                                <option value="8pt">8</option>
+                                <option value="10pt">10</option>
+                                <option value="12pt" selected>12</option>
+                                <option value="14pt">14</option>
+                                <option value="16pt">16</option>
+                                <option value="18pt">18</option>
+                            </select>
+                        </div>
+                    </div>
+                    <textarea id="activityContent">${activityData.content || ''}</textarea>
                 `;
 
-                // Ajouter l'écouteur d'événements pour la sauvegarde automatique
-                const textarea = document.getElementById('activityContent');
-                let saveTimeout;
+                // Initialiser TinyMCE
+                tinymce.init({
+                    selector: '#activityContent',
+                    height: 400,
+                    menubar: false,
+                    plugins: [
+                        'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+                        'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+                        'insertdatetime', 'media', 'table', 'help', 'wordcount', 'codesample',
+                        'emoticons'
+                    ],
+                    toolbar: 'undo redo | styles | bold italic underline strikethrough | ' +
+                        'alignleft aligncenter alignright alignjustify | ' +
+                        'bullist numlist outdent indent | link image | ' +
+                        'forecolor backcolor | addcomment | removeformat | help',
+                    content_style: 'body { font-family: Arial, sans-serif; font-size: 14px; }',
+                    setup: function(editor) {
+                        editor.on('Change', function() {
+                            if (saveTimeout) clearTimeout(saveTimeout);
+                            
+                            saveTimeout = setTimeout(async () => {
+                                try {
+                                    const update = {};
+                                    update[`${updatePath}.content`] = editor.getContent();
+                                    update[`${updatePath}.updatedAt`] = new Date().toISOString();
 
-                textarea.addEventListener('input', () => {
-                    if (saveTimeout) clearTimeout(saveTimeout);
-
-                    saveTimeout = setTimeout(async () => {
-                        try {
-                            const update = {};
-                            update[`${updatePath}.content`] = textarea.value;
-                            update[`${updatePath}.updatedAt`] = new Date().toISOString();
-
-                            await userDayRef.update(update);
-                            console.log('Contenu sauvegardé');
-                        } catch (error) {
-                            console.error('Erreur lors de la sauvegarde:', error);
-                            alert('Erreur lors de la sauvegarde');
-                        }
-                    }, 500);
+                                    await userDayRef.update(update);
+                                    console.log('Contenu sauvegardé');
+                                } catch (error) {
+                                    console.error('Erreur lors de la sauvegarde:', error);
+                                    alert('Erreur lors de la sauvegarde');
+                                }
+                            }, 500);
+                        });
+                    },
+                    // Activer les bulles de commentaires
+                    comments: true,
+                    comment_toolbar: 'bold italic strikethrough | bullist numlist | link',
+                    contextmenu: 'comment | link image inserttable | cell row column deletetable'
                 });
 
-                // Donner le focus à la zone de texte
-                textarea.focus();
             } catch (error) {
                 console.error('Erreur:', error);
                 alert('Erreur lors du chargement de l\'activité');
