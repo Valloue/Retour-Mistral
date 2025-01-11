@@ -273,105 +273,87 @@
                     }, 500);
                 });
 
-                // Gestion des puces automatiques
-                contentDiv.addEventListener('input', (e) => {
-                    const selection = window.getSelection();
-                    const range = selection.getRangeAt(0);
-                    const currentNode = range.startContainer;
-                    
-                    if (currentNode.nodeType === 3) { // Node.TEXT_NODE
-                        const text = currentNode.textContent;
-                        const position = range.startOffset;
-                        
-                        // Vérifier si on vient de taper "- " au début d'une ligne
-                        if (text.startsWith('- ') && position === 2 && isStartOfLine(currentNode)) {
-                            // Supprimer le "- "
-                            currentNode.textContent = text.substring(2);
-                            
-                            // Créer une liste à puces
-                            document.execCommand('insertUnorderedList');
-                            
-                            // Replacer le curseur
-                            range.setStart(currentNode, 0);
-                            range.setEnd(currentNode, 0);
-                            selection.removeAllRanges();
-                            selection.addRange(range);
-                        }
-                    }
-                });
-
-                // Gestion des touches Tab et Enter
+                // Gestion des puces avec le tiret
                 contentDiv.addEventListener('keydown', (e) => {
-                    if (e.key === 'Tab' || e.key === 'Enter') {
+                    // Gestion des puces avec le tiret
+                    if (e.key === ' ' && window.getSelection) {
                         const selection = window.getSelection();
                         const range = selection.getRangeAt(0);
-                        const currentNode = range.startContainer;
+                        const node = range.startContainer;
                         
-                        // Remonter jusqu'à l'élément parent le plus proche
-                        let element = currentNode;
-                        while (element && element.nodeType === 3) { // 3 = Node.TEXT_NODE
+                        if (node.nodeType === 3) { // Node.TEXT_NODE
+                            const text = node.textContent;
+                            const position = range.startOffset;
+                            
+                            // Vérifier si le caractère précédent est un tiret
+                            if (position === 1 && text === '-') {
+                                e.preventDefault();
+                                // Supprimer le tiret
+                                node.textContent = '';
+                                // Créer une liste à puces
+                                document.execCommand('insertUnorderedList');
+                            }
+                        }
+                    }
+                    
+                    // Gestion de l'indentation et désindentation
+                    if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+                        const selection = window.getSelection();
+                        const range = selection.getRangeAt(0);
+                        let element = range.startContainer;
+                        
+                        // Remonter jusqu'à trouver un élément li
+                        while (element && element.nodeName !== 'LI') {
                             element = element.parentElement;
                         }
                         
-                        // Vérifier si on est dans une liste
-                        const listItem = element ? element.closest('li') : null;
-                        
-                        if (listItem) {
+                        if (element) { // Si on est dans une puce
                             if (e.key === 'Tab') {
                                 e.preventDefault();
                                 
                                 if (e.shiftKey) {
-                                    // Shift + Tab : déplacer vers la gauche
-                                    const parentList = listItem.parentElement;
-                                    const grandParentItem = parentList.closest('li');
-                                    
-                                    if (grandParentItem) {
-                                        const greatGrandParentList = grandParentItem.parentElement;
-                                        greatGrandParentList.insertBefore(listItem, grandParentItem.nextSibling);
+                                    // Désindenter
+                                    const parentList = element.parentElement;
+                                    const grandParentLi = parentList.parentElement;
+                                    if (grandParentLi && grandParentLi.nodeName === 'LI') {
+                                        const greatGrandParentList = grandParentLi.parentElement;
+                                        greatGrandParentList.insertBefore(element, grandParentLi.nextSibling);
                                     }
                                 } else {
-                                    // Tab : déplacer vers la droite
-                                    const previousItem = listItem.previousElementSibling;
-                                    if (previousItem) {
-                                        let subList = previousItem.querySelector('ul');
+                                    // Indenter
+                                    const prevLi = element.previousElementSibling;
+                                    if (prevLi) {
+                                        let subList = prevLi.querySelector('ul');
                                         if (!subList) {
                                             subList = document.createElement('ul');
-                                            previousItem.appendChild(subList);
+                                            prevLi.appendChild(subList);
                                         }
-                                        subList.appendChild(listItem);
+                                        subList.appendChild(element);
                                     }
                                 }
-                            } else if (e.key === 'Enter' && listItem.textContent.trim() === '') {
-                                // Enter sur une ligne vide : supprimer la puce
+                            } else if (e.key === 'Enter' && element.textContent.trim() === '') {
                                 e.preventDefault();
-                                const parentList = listItem.parentElement;
+                                // Supprimer la puce vide
+                                const parentList = element.parentElement;
+                                element.remove();
                                 
-                                if (parentList.children.length === 1) {
-                                    // Si c'est le dernier item de la liste, supprimer toute la liste
+                                if (parentList.children.length === 0) {
                                     parentList.remove();
-                                } else {
-                                    // Sinon, juste supprimer l'item
-                                    listItem.remove();
                                 }
                                 
-                                // Insérer un saut de ligne
+                                // Insérer un nouveau paragraphe
                                 document.execCommand('insertParagraph');
                             }
                         }
                     }
                 });
 
-                // Fonction utilitaire pour vérifier si on est au début d'une ligne
-                function isStartOfLine(node) {
-                    let previousNode = node;
-                    while (previousNode) {
-                        if (previousNode.textContent.includes('\n')) {
-                            return previousNode.textContent.slice(previousNode.textContent.lastIndexOf('\n') + 1).length === 0;
-                        }
-                        previousNode = previousNode.previousSibling;
-                    }
-                    return true;
-                }
+                // Ajouter un gestionnaire pour le collage de texte propre
+                contentDiv.addEventListener('paste', (e) => {
+                    e.preventDefault();
+                    const text = e.clipboardData.getData('text/plain');
+                    document.execCommand('insertText', false, text);
+                });
 
                 // Donner le focus à la zone de texte
                 contentDiv.focus();
