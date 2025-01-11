@@ -285,19 +285,16 @@
                             const text = node.textContent;
                             const position = range.startOffset;
                             
-                            // Vérifier si le caractère précédent est un tiret
                             if (position === 1 && text === '-') {
                                 e.preventDefault();
-                                // Supprimer le tiret
                                 node.textContent = '';
-                                // Créer une liste à puces
                                 document.execCommand('insertUnorderedList');
                             }
                         }
                     }
                     
                     // Gestion de l'indentation et désindentation
-                    if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+                    if (e.key === 'Tab' || e.key === 'Enter') {
                         const selection = window.getSelection();
                         const range = selection.getRangeAt(0);
                         let element = range.startContainer;
@@ -318,6 +315,13 @@
                                     if (grandParentLi && grandParentLi.nodeName === 'LI') {
                                         const greatGrandParentList = grandParentLi.parentElement;
                                         greatGrandParentList.insertBefore(element, grandParentLi.nextSibling);
+                                        
+                                        // Restaurer la position du curseur
+                                        const newRange = document.createRange();
+                                        newRange.setStart(range.startContainer, range.startOffset);
+                                        newRange.setEnd(range.endContainer, range.endOffset);
+                                        selection.removeAllRanges();
+                                        selection.addRange(newRange);
                                     }
                                 } else {
                                     // Indenter
@@ -331,18 +335,27 @@
                                         subList.appendChild(element);
                                     }
                                 }
-                            } else if (e.key === 'Enter' && element.textContent.trim() === '') {
-                                e.preventDefault();
-                                // Supprimer la puce vide
-                                const parentList = element.parentElement;
-                                element.remove();
-                                
-                                if (parentList.children.length === 0) {
-                                    parentList.remove();
+                            } else if (e.key === 'Enter') {
+                                if (element.textContent.trim() === '') {
+                                    e.preventDefault();
+                                    
+                                    // Vérifier si on peut désindenter
+                                    const parentList = element.parentElement;
+                                    const grandParentLi = parentList.parentElement;
+                                    
+                                    if (grandParentLi && grandParentLi.nodeName === 'LI') {
+                                        // Désindenter
+                                        const greatGrandParentList = grandParentLi.parentElement;
+                                        greatGrandParentList.insertBefore(element, grandParentLi.nextSibling);
+                                    } else {
+                                        // Supprimer la puce si on ne peut pas désindenter
+                                        element.remove();
+                                        if (parentList.children.length === 0) {
+                                            parentList.remove();
+                                        }
+                                        document.execCommand('insertParagraph');
+                                    }
                                 }
-                                
-                                // Insérer un nouveau paragraphe
-                                document.execCommand('insertParagraph');
                             }
                         }
                     }
