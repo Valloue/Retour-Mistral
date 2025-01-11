@@ -333,10 +333,22 @@
                             const text = node.textContent;
                             const position = range.startOffset;
                             
-                            if (position === 1 && text === '-') {
+                            // Vérifier si on est au début d'une ligne et qu'on vient de taper "- "
+                            if (position === 2 && text.startsWith('-') && isStartOfLine(node)) {
                                 e.preventDefault();
-                                node.textContent = '';
+                                // Supprimer le "- "
+                                const newText = text.substring(2);
+                                node.textContent = newText;
+                                
+                                // Créer une liste à puces à la position actuelle
                                 document.execCommand('insertUnorderedList');
+                                
+                                // Replacer le curseur
+                                const newRange = document.createRange();
+                                newRange.setStart(node, 0);
+                                newRange.collapse(true);
+                                selection.removeAllRanges();
+                                selection.addRange(newRange);
                             }
                         }
                     }
@@ -431,6 +443,14 @@
                 const userId = window.auth.currentUser.uid;
                 const today = new Date().toISOString().split('T')[0];
                 
+                // Récupérer le nom d'utilisateur
+                const userDoc = await window.db.collection('users').doc(userId).get();
+                const username = userDoc.data().username;
+                
+                // Formater la date pour le titre
+                const formattedDate = formatDate(new Date());
+                const retourTitle = `Retour ${username} ${formattedDate}`;
+                
                 // Récupérer le document du jour
                 const userDayRef = window.db.collection('users')
                     .doc(userId)
@@ -438,20 +458,49 @@
                     .doc(today);
 
                 const doc = await userDayRef.get();
+                
+                // Si le document n'existe pas, le créer
+                if (!doc.exists) {
+                    await userDayRef.set({
+                        '1_date': today,
+                        '2_title': retourTitle,
+                        '3_matin': {
+                            activites: {}
+                        },
+                        '4_apresMidi': {
+                            activites: {}
+                        },
+                        '5_problematiques': {
+                            items: {}
+                        }
+                    });
+                    return; // Retourner car il n'y a pas encore d'activités à charger
+                }
+
                 const data = doc.data();
 
-                // Charger les activités avec les bons chemins
-                Object.entries(data['3_matin'].activites || {}).forEach(([id, activity]) => {
-                    addActivityToList('matin', { id, title: activity.title });
-                });
+                // Charger les activités existantes
+                if (data['3_matin'] && data['3_matin'].activites) {
+                    Object.entries(data['3_matin'].activites).forEach(([id, activity]) => {
+                        addActivityToList('matin', { id, title: activity.title });
+                    });
+                }
 
-                Object.entries(data['4_apresMidi'].activites || {}).forEach(([id, activity]) => {
-                    addActivityToList('apresMidi', { id, title: activity.title });
-                });
+                if (data['4_apresMidi'] && data['4_apresMidi'].activites) {
+                    Object.entries(data['4_apresMidi'].activites).forEach(([id, activity]) => {
+                        addActivityToList('apresMidi', { id, title: activity.title });
+                    });
+                }
 
-                Object.entries(data['5_problematiques'].items || {}).forEach(([id, problem]) => {
-                    addActivityToList('problematiques', { id, title: problem.title });
-                });
+                if (data['5_problematiques'] && data['5_problematiques'].items) {
+                    Object.entries(data['5_problematiques'].items).forEach(([id, problem]) => {
+                        addActivityToList('problematiques', { id, title: problem.title });
+                    });
+                }
+
+                // Mettre à jour le titre dans l'interface
+                document.getElementById('retourTitle').textContent = data['2_title'] || retourTitle;
+
             } catch (error) {
                 console.error('Erreur lors du chargement:', error);
             }
@@ -462,6 +511,18 @@
             const day = String(date.getDate()).padStart(2, '0');
             const month = String(date.getMonth() + 1).padStart(2, '0');
             return `${day}/${month}`;
+        }
+
+        // Ajouter cette fonction utilitaire
+        function isStartOfLine(node) {
+            const range = document.createRange();
+            range.selectNodeContents(node);
+            range.collapse(true);
+            const preCaretRange = range.cloneRange();
+            preCaretRange.selectNodeContents(node.parentNode);
+            preCaretRange.setEnd(range.endContainer, range.endOffset);
+            const text = preCaretRange.toString();
+            return text.trim().length === 0 || text.endsWith('\n');
         }
     </script>
 </body>
