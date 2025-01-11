@@ -322,20 +322,39 @@
                 });
 
                 // Gestion des puces avec le tiret
-                contentDiv.addEventListener('input', (e) => {
-                    const selection = window.getSelection();
-                    const range = selection.getRangeAt(0);
-                    const node = range.startContainer;
-                    
-                    if (node.nodeType === 3) { // Node.TEXT_NODE
-                        const text = node.textContent;
-                        if (text === '- ') {
-                            // Supprimer le "- "
-                            node.textContent = '';
-                            // Créer une liste à puces
-                            document.execCommand('insertUnorderedList');
-                            // Donner le focus
-                            contentDiv.focus();
+                contentDiv.addEventListener('keydown', (e) => {
+                    if (e.key === ' ') {
+                        const selection = window.getSelection();
+                        const range = selection.getRangeAt(0);
+                        const node = range.startContainer;
+                        
+                        if (node.nodeType === 3) { // Node.TEXT_NODE
+                            const text = node.textContent;
+                            const position = range.startOffset;
+                            
+                            // Vérifier si on est au début d'une ligne et qu'on vient de taper un tiret
+                            if (text === '-' || (text.endsWith('-') && text.slice(0, -1).trim() === '')) {
+                                e.preventDefault();
+                                
+                                // Créer un nouveau paragraphe pour la puce
+                                const listItem = document.createElement('li');
+                                const ul = document.createElement('ul');
+                                ul.appendChild(listItem);
+                                
+                                // Remplacer le texte actuel par la liste
+                                node.textContent = '';
+                                node.parentNode.insertBefore(ul, node);
+                                
+                                // Placer le curseur dans le nouvel élément de liste
+                                const newRange = document.createRange();
+                                newRange.setStart(listItem, 0);
+                                newRange.collapse(true);
+                                selection.removeAllRanges();
+                                selection.addRange(newRange);
+                                
+                                // Donner le focus
+                                contentDiv.focus();
+                            }
                         }
                     }
                 });
@@ -361,8 +380,25 @@
                                     const parentList = element.parentElement;
                                     const grandParentLi = parentList.parentElement;
                                     if (grandParentLi && grandParentLi.nodeName === 'LI') {
+                                        // Sauvegarder la position actuelle du curseur
+                                        const savedSelection = {
+                                            node: range.startContainer,
+                                            offset: range.startOffset
+                                        };
+                                        
+                                        // Effectuer la désindentation
                                         const greatGrandParentList = grandParentLi.parentElement;
                                         greatGrandParentList.insertBefore(element, grandParentLi.nextSibling);
+                                        
+                                        // Restaurer la position du curseur
+                                        const newRange = document.createRange();
+                                        newRange.setStart(savedSelection.node, savedSelection.offset);
+                                        newRange.collapse(true);
+                                        selection.removeAllRanges();
+                                        selection.addRange(newRange);
+                                        
+                                        // S'assurer que l'élément est visible
+                                        element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                                     }
                                 } else {
                                     // Indenter
