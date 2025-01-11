@@ -228,9 +228,54 @@
             const div = document.createElement('div');
             div.className = 'activity-item';
             div.dataset.id = activity.id;
-            div.textContent = activity.title;
-            div.onclick = () => selectActivity(activity.id);
 
+            // Créer un conteneur pour le titre et le bouton
+            const contentWrapper = document.createElement('div');
+            contentWrapper.className = 'activity-item-content';
+            
+            // Ajouter le titre
+            const titleSpan = document.createElement('span');
+            titleSpan.textContent = activity.title;
+            titleSpan.onclick = () => selectActivity(activity.id);
+            contentWrapper.appendChild(titleSpan);
+            
+            // Ajouter le bouton de suppression
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.innerHTML = '🗑️';
+            deleteBtn.title = 'Supprimer';
+            deleteBtn.onclick = async (e) => {
+                e.stopPropagation(); // Empêcher la sélection de l'activité
+                if (confirm('Voulez-vous vraiment supprimer cette activité ?')) {
+                    try {
+                        const userId = window.auth.currentUser.uid;
+                        const today = new Date().toISOString().split('T')[0];
+                        const userDayRef = window.db.collection('users')
+                            .doc(userId)
+                            .collection('retours')
+                            .doc(today);
+
+                        // Créer l'objet de mise à jour pour supprimer l'activité
+                        const update = {};
+                        if (section === 'matin') {
+                            update[`3_matin.activites.${activity.id}`] = firebase.firestore.FieldValue.delete();
+                        } else if (section === 'apresMidi') {
+                            update[`4_apresMidi.activites.${activity.id}`] = firebase.firestore.FieldValue.delete();
+                        } else {
+                            update[`5_problematiques.items.${activity.id}`] = firebase.firestore.FieldValue.delete();
+                        }
+
+                        await userDayRef.update(update);
+                        div.remove();
+                    } catch (error) {
+                        console.error('Erreur lors de la suppression:', error);
+                        alert('Erreur lors de la suppression');
+                    }
+                }
+            };
+            contentWrapper.appendChild(deleteBtn);
+
+            div.appendChild(contentWrapper);
             activitesLists[section].appendChild(div);
         }
 

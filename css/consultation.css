@@ -87,4 +87,51 @@
 
 .activity-content li {
     margin-bottom: 5px;
+}
+
+.retours-list {
+    margin-top: 20px;
+}
+
+.retours-list h3 {
+    font-size: 1rem;
+    color: #202124;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.no-retours {
+    color: #666;
+    font-style: italic;
+    padding: 10px 0;
+}
+
+.retours-list-items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.retour-item {
+    padding: 8px 12px;
+    margin-bottom: 4px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    color: #202124;
+}
+
+.retour-item:hover {
+    background: #f1f3f4;
+    border-color: #1a73e8;
+}
+
+.retour-item.active {
+    background: #e8f0fe;
+    border-color: #1a73e8;
+    color: #1a73e8;
 } 

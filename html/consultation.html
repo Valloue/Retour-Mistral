@@ -97,6 +97,8 @@
                 loadRetourContent(dateSelector.value);
             });
 
+            // Charger la liste des retours existants
+            await loadRetoursList();
             await loadRetourContent(today);
         }
 
@@ -171,6 +173,45 @@
             document.getElementById('activitesMatin').innerHTML = '';
             document.getElementById('activitesApresMidi').innerHTML = '';
             document.getElementById('problematiques').innerHTML = '';
+        }
+
+        // Ajouter cette nouvelle fonction pour charger la liste des retours
+        async function loadRetoursList() {
+            try {
+                const userId = window.auth.currentUser.uid;
+                const retoursList = document.getElementById('retoursList');
+                retoursList.innerHTML = '<h3>Rapports existants</h3>';
+
+                const retoursRef = window.db.collection('users')
+                    .doc(userId)
+                    .collection('retours');
+
+                const snapshot = await retoursRef.orderBy('1_date', 'desc').get();
+                
+                if (snapshot.empty) {
+                    retoursList.innerHTML += '<p class="no-retours">Aucun rapport disponible</p>';
+                    return;
+                }
+
+                const list = document.createElement('ul');
+                list.className = 'retours-list-items';
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const li = document.createElement('li');
+                    li.className = 'retour-item';
+                    li.textContent = data['2_title'] || `Retour du ${data['1_date']}`;
+                    li.onclick = () => {
+                        dateSelector.value = data['1_date'];
+                        loadRetourContent(data['1_date']);
+                    };
+                    list.appendChild(li);
+                });
+
+                retoursList.appendChild(list);
+            } catch (error) {
+                console.error('Erreur lors du chargement de la liste des retours:', error);
+            }
         }
     </script>
 </body>
