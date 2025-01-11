@@ -199,4 +199,33 @@
     font-size: 1.2rem;
     font-weight: bold;
     color: #2c3e50;
+}
+
+/* Styles pour TinyMCE */
+.tox-tinymce {
+    border: none !important;
+    border-radius: 8px !important;
+}
+
+.tox .tox-toolbar__primary {
+    background: #f8f9fa !important;
+    padding: 8px !important;
+    border-bottom: 1px solid #dee2e6 !important;
+}
+
+.tox .tox-edit-area__iframe {
+    background: white !important;
+}
+
+.tox .tox-tbtn {
+    border-radius: 4px !important;
+}
+
+.tox .tox-tbtn:hover {
+    background: #e9ecef !important;
+}
+
+.tox .tox-tbtn--enabled,
+.tox .tox-tbtn--enabled:hover {
+    background: #e2e6ea !important;
 } 
