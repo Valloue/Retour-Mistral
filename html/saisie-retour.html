@@ -69,10 +69,58 @@
 
     <!-- Logique de l'application -->
     <script>
-        // Vérification de l'authentification
-        window.auth.onAuthStateChanged((user) => {
+        // Vérification de l'authentification et création du retour quotidien
+        window.auth.onAuthStateChanged(async (user) => {
             if (!user) {
                 window.location.href = 'login.html';
+                return;
+            }
+
+            try {
+                // Récupérer les données de l'utilisateur
+                const userDoc = await window.db.collection('users').doc(user.uid).get();
+                const username = userDoc.data().username;
+                
+                // Créer le retour du jour
+                const today = new Date().toISOString().split('T')[0];
+                const formattedDate = formatDate(new Date());
+                const retourTitle = `Retour ${username} ${formattedDate}`;
+                
+                // Référence au document du jour
+                const userDayRef = window.db.collection('users')
+                    .doc(user.uid)
+                    .collection('retours')
+                    .doc(today);
+
+                // Vérifier si le retour existe déjà
+                const doc = await userDayRef.get();
+                if (!doc.exists) {
+                    // Créer un nouveau retour pour aujourd'hui
+                    await userDayRef.set({
+                        '1_date': today,
+                        '2_title': retourTitle,
+                        '3_matin': {
+                            activites: {}
+                        },
+                        '4_apresMidi': {
+                            activites: {}
+                        },
+                        '5_problematiques': {
+                            items: {}
+                        }
+                    });
+                    console.log('Nouveau retour créé pour aujourd\'hui');
+                }
+
+                // Mettre à jour le titre dans l'interface
+                document.getElementById('retourTitle').textContent = retourTitle;
+
+                // Charger les activités existantes
+                await loadActivities();
+
+            } catch (error) {
+                console.error('Erreur lors de l\'initialisation:', error);
+                alert('Erreur lors de l\'initialisation de la page');
             }
         });
 
@@ -383,37 +431,14 @@
                 const userId = window.auth.currentUser.uid;
                 const today = new Date().toISOString().split('T')[0];
                 
-                // Récupérer le nom d'utilisateur
-                const userDoc = await window.db.collection('users').doc(userId).get();
-                const username = userDoc.data().username;
-                
-                // Formater la date pour le titre
-                const formattedDate = formatDate(new Date());
-                const retourTitle = `Retour ${username} ${formattedDate}`;
-                
-                // Récupérer le document du jour pour l'utilisateur
+                // Récupérer le document du jour
                 const userDayRef = window.db.collection('users')
                     .doc(userId)
                     .collection('retours')
                     .doc(today);
 
                 const doc = await userDayRef.get();
-                if (!doc.exists) {
-                    await userDayRef.set({
-                        '1_date': today,
-                        '2_title': retourTitle,
-                        '3_matin': { activites: {} },
-                        '4_apresMidi': { activites: {} },
-                        '5_problematiques': { items: {} }
-                    });
-                    return;
-                }
-
                 const data = doc.data();
-
-                // Mettre à jour le titre dans l'interface
-                const titleElement = document.getElementById('retourTitle');
-                titleElement.textContent = data['2_title'] || retourTitle;
 
                 // Charger les activités avec les bons chemins
                 Object.entries(data['3_matin'].activites || {}).forEach(([id, activity]) => {

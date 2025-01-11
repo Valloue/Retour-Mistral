@@ -6,7 +6,6 @@
     <title>RetourMistral - Consultation</title>
     <link rel="stylesheet" href="../css/common.css">
     <link rel="stylesheet" href="../css/consultation.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -24,32 +23,37 @@
     </nav>
 
     <div class="container">
-        <div class="filters">
-            <div class="date-picker">
-                <input type="text" id="datePicker" placeholder="Sélectionner une date">
+        <div class="sidebar">
+            <div class="date-selector">
+                <label for="dateSelector">Sélectionner une date</label>
+                <input type="date" id="dateSelector" class="date-input">
             </div>
+            <div id="retoursList" class="retours-list"></div>
         </div>
 
-        <div class="board">
-            <div class="column">
-                <h2>Activités Matin</h2>
-                <div id="matinList" class="card-list"></div>
-            </div>
-            
-            <div class="column">
-                <h2>Activités Après-midi</h2>
-                <div id="apresMidiList" class="card-list"></div>
-            </div>
-            
-            <div class="column">
-                <h2>Problématiques</h2>
-                <div id="problematiquesList" class="card-list"></div>
+        <div class="main-content">
+            <div id="retourTitle" class="retour-title"></div>
+            <div class="content-sections">
+                <div class="section">
+                    <h2>Activités Matin</h2>
+                    <div id="activitesMatin" class="activities-list"></div>
+                </div>
+
+                <div class="section">
+                    <h2>Activités Après-midi</h2>
+                    <div id="activitesApresMidi" class="activities-list"></div>
+                </div>
+
+                <div class="section">
+                    <h2>Problématiques</h2>
+                    <div id="problematiques" class="activities-list"></div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Initialisation Firebase -->
     <script>
+        // Configuration Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyCEvK9CVWCmNGmOvHtwNnEJ65A_33JgSq0",
             authDomain: "retour-mistral.firebaseapp.com",
@@ -62,14 +66,112 @@
         firebase.initializeApp(firebaseConfig);
         window.auth = firebase.auth();
         window.db = firebase.firestore();
-    </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://npmcdn.com/flatpickr/dist/l10n/fr.js"></script>
+        // Vérification de l'authentification
+        window.auth.onAuthStateChanged((user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+            } else {
+                loadRetours();
+            }
+        });
 
-    <!-- Logique de consultation -->
-    <script>
-        // ... code de consultation.js converti en version compat ...
+        // Gestion de la déconnexion
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            try {
+                await window.auth.signOut();
+                window.location.href = 'login.html';
+            } catch (error) {
+                console.error('Erreur lors de la déconnexion:', error);
+            }
+        });
+
+        // Chargement des retours
+        async function loadRetours() {
+            const dateSelector = document.getElementById('dateSelector');
+            const today = new Date().toISOString().split('T')[0];
+            dateSelector.value = today;
+            dateSelector.max = today;
+
+            dateSelector.addEventListener('change', () => {
+                loadRetourContent(dateSelector.value);
+            });
+
+            await loadRetourContent(today);
+        }
+
+        async function loadRetourContent(date) {
+            try {
+                const userId = window.auth.currentUser.uid;
+                const retourRef = window.db.collection('users')
+                    .doc(userId)
+                    .collection('retours')
+                    .doc(date);
+
+                const doc = await retourRef.get();
+                if (!doc.exists) {
+                    clearContent();
+                    return;
+                }
+
+                const data = doc.data();
+                displayRetourContent(data);
+            } catch (error) {
+                console.error('Erreur lors du chargement:', error);
+            }
+        }
+
+        function displayRetourContent(data) {
+            // Afficher le titre
+            document.getElementById('retourTitle').textContent = data['2_title'] || '';
+
+            // Afficher les activités du matin
+            const matinList = document.getElementById('activitesMatin');
+            matinList.innerHTML = '';
+            Object.values(data['3_matin'].activites || {}).forEach(activity => {
+                const div = createActivityElement(activity);
+                matinList.appendChild(div);
+            });
+
+            // Afficher les activités de l'après-midi
+            const apresMidiList = document.getElementById('activitesApresMidi');
+            apresMidiList.innerHTML = '';
+            Object.values(data['4_apresMidi'].activites || {}).forEach(activity => {
+                const div = createActivityElement(activity);
+                apresMidiList.appendChild(div);
+            });
+
+            // Afficher les problématiques
+            const problemesList = document.getElementById('problematiques');
+            problemesList.innerHTML = '';
+            Object.values(data['5_problematiques'].items || {}).forEach(problem => {
+                const div = createActivityElement(problem);
+                problemesList.appendChild(div);
+            });
+        }
+
+        function createActivityElement(activity) {
+            const div = document.createElement('div');
+            div.className = 'activity-item';
+            
+            const title = document.createElement('h3');
+            title.textContent = activity.title;
+            div.appendChild(title);
+
+            const content = document.createElement('div');
+            content.className = 'activity-content';
+            content.innerHTML = activity.content || '';
+            div.appendChild(content);
+
+            return div;
+        }
+
+        function clearContent() {
+            document.getElementById('retourTitle').textContent = '';
+            document.getElementById('activitesMatin').innerHTML = '';
+            document.getElementById('activitesApresMidi').innerHTML = '';
+            document.getElementById('problematiques').innerHTML = '';
+        }
     </script>
 </body>
 </html> 
