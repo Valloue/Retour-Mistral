@@ -63,16 +63,35 @@ registerForm.addEventListener('submit', async (e) => {
 
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        
-        // Créer le profil utilisateur dans Firestore
-        await setDoc(doc(db, 'users', userCredential.user.uid), {
+        const user = userCredential.user;
+
+        await setDoc(doc(db, 'users', user.uid), {
             username,
             email,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
         });
 
         window.location.href = 'saisie-retour.html';
     } catch (error) {
-        alert('Erreur lors de l\'inscription : ' + error.message);
+        console.error('Erreur lors de l\'inscription:', error);
+        let errorMessage = 'Une erreur est survenue lors de l\'inscription.';
+        
+        switch (error.code) {
+            case 'auth/email-already-in-use':
+                errorMessage = 'Cet email est déjà utilisé.';
+                break;
+            case 'auth/invalid-email':
+                errorMessage = 'L\'adresse email n\'est pas valide.';
+                break;
+            case 'auth/operation-not-allowed':
+                errorMessage = 'L\'inscription par email/mot de passe n\'est pas activée.';
+                break;
+            case 'auth/weak-password':
+                errorMessage = 'Le mot de passe est trop faible.';
+                break;
+        }
+        
+        alert(errorMessage);
     }
 }); 
