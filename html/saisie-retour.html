@@ -105,21 +105,65 @@
             if (!title) return;
 
             try {
-                const docRef = await window.db.collection('activities').add({
-                    userId: window.auth.currentUser.uid,
-                    section,
-                    title,
+                const userId = window.auth.currentUser.uid;
+                const today = new Date().toISOString().split('T')[0];
+                
+                // Créer/obtenir le document du jour pour l'utilisateur
+                const userDayRef = window.db.collection('users')
+                    .doc(userId)
+                    .collection('retours')
+                    .doc(today);
+
+                // Vérifier si le document existe déjà
+                const doc = await userDayRef.get();
+                if (!doc.exists) {
+                    // Créer la structure initiale du jour
+                    await userDayRef.set({
+                        date: today,
+                        matin: {
+                            activites: {}
+                        },
+                        apresMidi: {
+                            activites: {}
+                        },
+                        problematiques: {
+                            items: {}
+                        }
+                    });
+                }
+
+                // Générer un ID unique pour l'activité
+                const activityId = window.db.collection('_').doc().id;
+
+                // Définir le chemin selon la section
+                let updatePath;
+                if (section === 'matin') {
+                    updatePath = `matin.activites.${activityId}`;
+                } else if (section === 'apresMidi') {
+                    updatePath = `apresMidi.activites.${activityId}`;
+                } else {
+                    updatePath = `problematiques.items.${activityId}`;
+                }
+
+                // Créer l'objet de mise à jour
+                const update = {};
+                update[updatePath] = {
+                    title: title,
                     content: '',
                     createdAt: new Date().toISOString()
-                });
+                };
 
+                // Mettre à jour le document
+                await userDayRef.update(update);
+
+                // Ajouter à la liste dans l'interface
                 addActivityToList(section, {
-                    id: docRef.id,
-                    title
+                    id: activityId,
+                    title: title
                 });
             } catch (error) {
-                console.error('Erreur lors de la création de l\'activité:', error);
-                alert('Erreur lors de la création de l\'activité');
+                console.error('Erreur lors de la création:', error);
+                alert('Erreur lors de la création');
             }
         }
 
@@ -135,18 +179,30 @@
 
         async function selectActivity(activityId) {
             try {
-                // Désélectionner l'activité précédente
-                document.querySelectorAll('.activity-item.active').forEach(item => {
-                    item.classList.remove('active');
-                });
+                const userId = window.auth.currentUser.uid;
+                const today = new Date().toISOString().split('T')[0];
+                const userDayRef = window.db.collection('users')
+                    .doc(userId)
+                    .collection('retours')
+                    .doc(today);
 
-                // Sélectionner la nouvelle activité
-                const activityElement = document.querySelector(`[data-id="${activityId}"]`);
-                activityElement.classList.add('active');
+                const doc = await userDayRef.get();
+                const data = doc.data();
 
-                // Récupérer les données de l'activité
-                const activityDoc = await window.db.collection('activities').doc(activityId).get();
-                const activityData = activityDoc.data();
+                // Chercher l'activité dans toutes les sections
+                let activityData;
+                let updatePath;
+
+                if (data.matin.activites?.[activityId]) {
+                    activityData = data.matin.activites[activityId];
+                    updatePath = `matin.activites.${activityId}`;
+                } else if (data.apresMidi.activites?.[activityId]) {
+                    activityData = data.apresMidi.activites[activityId];
+                    updatePath = `apresMidi.activites.${activityId}`;
+                } else if (data.problematiques.items?.[activityId]) {
+                    activityData = data.problematiques.items[activityId];
+                    updatePath = `problematiques.items.${activityId}`;
+                }
 
                 // Créer et configurer la zone de texte
                 const editor = document.getElementById('editor');
@@ -163,20 +219,19 @@
                 let saveTimeout;
 
                 textarea.addEventListener('input', () => {
-                    // Annuler le timeout précédent
                     if (saveTimeout) clearTimeout(saveTimeout);
 
-                    // Définir un nouveau timeout pour sauvegarder après 500ms d'inactivité
                     saveTimeout = setTimeout(async () => {
                         try {
-                            await window.db.collection('activities').doc(activityId).update({
-                                content: textarea.value,
-                                updatedAt: new Date().toISOString()
-                            });
+                            const update = {};
+                            update[`${updatePath}.content`] = textarea.value;
+                            update[`${updatePath}.updatedAt`] = new Date().toISOString();
+
+                            await userDayRef.update(update);
                             console.log('Contenu sauvegardé');
                         } catch (error) {
                             console.error('Erreur lors de la sauvegarde:', error);
-                            alert('Erreur lors de la sauvegarde des modifications');
+                            alert('Erreur lors de la sauvegarde');
                         }
                     }, 500);
                 });
@@ -185,7 +240,7 @@
                 textarea.focus();
 
             } catch (error) {
-                console.error('Erreur lors du chargement de l\'activité:', error);
+                console.error('Erreur:', error);
                 alert('Erreur lors du chargement de l\'activité');
             }
         }
@@ -193,19 +248,45 @@
         // Charger les activités existantes
         async function loadActivities() {
             try {
-                const snapshot = await window.db.collection('activities')
-                    .where('userId', '==', window.auth.currentUser.uid)
-                    .get();
+                const userId = window.auth.currentUser.uid;
+                const today = new Date().toISOString().split('T')[0];
                 
-                snapshot.forEach((doc) => {
-                    const activity = {
-                        id: doc.id,
-                        ...doc.data()
-                    };
-                    addActivityToList(activity.section, activity);
+                // Récupérer le document du jour pour l'utilisateur
+                const userDayRef = window.db.collection('users')
+                    .doc(userId)
+                    .collection('retours')
+                    .doc(today);
+
+                const doc = await userDayRef.get();
+                if (!doc.exists) {
+                    // Créer un nouveau document si c'est le premier accès du jour
+                    await userDayRef.set({
+                        date: today,
+                        matin: { activites: {} },
+                        apresMidi: { activites: {} },
+                        problematiques: { items: {} }
+                    });
+                    return;
+                }
+
+                const data = doc.data();
+
+                // Charger les activités du matin
+                Object.entries(data.matin.activites || {}).forEach(([id, activity]) => {
+                    addActivityToList('matin', { id, title: activity.title });
+                });
+
+                // Charger les activités de l'après-midi
+                Object.entries(data.apresMidi.activites || {}).forEach(([id, activity]) => {
+                    addActivityToList('apresMidi', { id, title: activity.title });
+                });
+
+                // Charger les problématiques
+                Object.entries(data.problematiques.items || {}).forEach(([id, problem]) => {
+                    addActivityToList('problematiques', { id, title: problem.title });
                 });
             } catch (error) {
-                console.error('Erreur lors du chargement des activités:', error);
+                console.error('Erreur lors du chargement:', error);
             }
         }
 
