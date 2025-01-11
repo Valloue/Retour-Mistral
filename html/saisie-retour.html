@@ -322,38 +322,26 @@
                 });
 
                 // Gestion des puces avec le tiret
-                contentDiv.addEventListener('keydown', (e) => {
-                    // Gestion des puces avec le tiret
-                    if (e.key === ' ' && window.getSelection) {
-                        const selection = window.getSelection();
-                        const range = selection.getRangeAt(0);
-                        const node = range.startContainer;
-                        
-                        if (node.nodeType === 3) { // Node.TEXT_NODE
-                            const text = node.textContent;
-                            const position = range.startOffset;
-                            
-                            // Vérifier si on est au début d'une ligne et qu'on vient de taper "- "
-                            if (position === 2 && text.startsWith('-') && isStartOfLine(node)) {
-                                e.preventDefault();
-                                // Supprimer le "- "
-                                const newText = text.substring(2);
-                                node.textContent = newText;
-                                
-                                // Créer une liste à puces à la position actuelle
-                                document.execCommand('insertUnorderedList');
-                                
-                                // Replacer le curseur
-                                const newRange = document.createRange();
-                                newRange.setStart(node, 0);
-                                newRange.collapse(true);
-                                selection.removeAllRanges();
-                                selection.addRange(newRange);
-                            }
+                contentDiv.addEventListener('input', (e) => {
+                    const selection = window.getSelection();
+                    const range = selection.getRangeAt(0);
+                    const node = range.startContainer;
+                    
+                    if (node.nodeType === 3) { // Node.TEXT_NODE
+                        const text = node.textContent;
+                        if (text === '- ') {
+                            // Supprimer le "- "
+                            node.textContent = '';
+                            // Créer une liste à puces
+                            document.execCommand('insertUnorderedList');
+                            // Donner le focus
+                            contentDiv.focus();
                         }
                     }
-                    
-                    // Gestion de l'indentation et désindentation
+                });
+
+                // Gestion de l'indentation et désindentation
+                contentDiv.addEventListener('keydown', (e) => {
                     if (e.key === 'Tab' || e.key === 'Enter') {
                         const selection = window.getSelection();
                         const range = selection.getRangeAt(0);
@@ -375,13 +363,6 @@
                                     if (grandParentLi && grandParentLi.nodeName === 'LI') {
                                         const greatGrandParentList = grandParentLi.parentElement;
                                         greatGrandParentList.insertBefore(element, grandParentLi.nextSibling);
-                                        
-                                        // Restaurer la position du curseur
-                                        const newRange = document.createRange();
-                                        newRange.setStart(range.startContainer, range.startOffset);
-                                        newRange.setEnd(range.endContainer, range.endOffset);
-                                        selection.removeAllRanges();
-                                        selection.addRange(newRange);
                                     }
                                 } else {
                                     // Indenter
@@ -395,27 +376,15 @@
                                         subList.appendChild(element);
                                     }
                                 }
-                            } else if (e.key === 'Enter') {
-                                if (element.textContent.trim() === '') {
-                                    e.preventDefault();
-                                    
-                                    // Vérifier si on peut désindenter
-                                    const parentList = element.parentElement;
-                                    const grandParentLi = parentList.parentElement;
-                                    
-                                    if (grandParentLi && grandParentLi.nodeName === 'LI') {
-                                        // Désindenter
-                                        const greatGrandParentList = grandParentLi.parentElement;
-                                        greatGrandParentList.insertBefore(element, grandParentLi.nextSibling);
-                                    } else {
-                                        // Supprimer la puce si on ne peut pas désindenter
-                                        element.remove();
-                                        if (parentList.children.length === 0) {
-                                            parentList.remove();
-                                        }
-                                        document.execCommand('insertParagraph');
-                                    }
+                            } else if (e.key === 'Enter' && element.textContent.trim() === '') {
+                                e.preventDefault();
+                                // Supprimer la puce vide
+                                const parentList = element.parentElement;
+                                element.remove();
+                                if (parentList.children.length === 0) {
+                                    parentList.remove();
                                 }
+                                document.execCommand('insertParagraph');
                             }
                         }
                     }
