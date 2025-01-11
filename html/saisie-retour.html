@@ -126,17 +126,19 @@
                 // Vérifier si le document existe déjà
                 const doc = await userDayRef.get();
                 if (!doc.exists) {
-                    // Créer la structure initiale du jour avec le titre et l'ordre forcé
                     await userDayRef.set({
-                        '1_date': today,
-                        '2_title': retourTitle,
-                        '3_matin': {
+                        metadata: {
+                            date: today,
+                            title: retourTitle,
+                            order: ['date', 'title', 'matin', 'apresMidi', 'problematiques']
+                        },
+                        matin: {
                             activites: {}
                         },
-                        '4_apresMidi': {
+                        apresMidi: {
                             activites: {}
                         },
-                        '5_problematiques': {
+                        problematiques: {
                             items: {}
                         }
                     });
@@ -148,11 +150,11 @@
                 // Définir le chemin selon la section
                 let updatePath;
                 if (section === 'matin') {
-                    updatePath = `3_matin.activites.${activityId}`;
+                    updatePath = `matin.activites.${activityId}`;
                 } else if (section === 'apresMidi') {
-                    updatePath = `4_apresMidi.activites.${activityId}`;
+                    updatePath = `apresMidi.activites.${activityId}`;
                 } else {
-                    updatePath = `5_problematiques.items.${activityId}`;
+                    updatePath = `problematiques.items.${activityId}`;
                 }
 
                 // Créer l'objet de mise à jour
@@ -199,19 +201,33 @@
                 const doc = await userDayRef.get();
                 const data = doc.data();
 
+                // Désélectionner l'activité précédente
+                document.querySelectorAll('.activity-item.active').forEach(item => {
+                    item.classList.remove('active');
+                });
+
+                // Sélectionner la nouvelle activité
+                const activityElement = document.querySelector(`[data-id="${activityId}"]`);
+                activityElement.classList.add('active');
+
                 // Chercher l'activité dans toutes les sections
                 let activityData;
                 let updatePath;
 
-                if (data['3_matin'].activites?.[activityId]) {
-                    activityData = data['3_matin'].activites[activityId];
-                    updatePath = `3_matin.activites.${activityId}`;
-                } else if (data['4_apresMidi'].activites?.[activityId]) {
-                    activityData = data['4_apresMidi'].activites[activityId];
-                    updatePath = `4_apresMidi.activites.${activityId}`;
-                } else if (data['5_problematiques'].items?.[activityId]) {
-                    activityData = data['5_problematiques'].items[activityId];
-                    updatePath = `5_problematiques.items.${activityId}`;
+                if (data.matin.activites?.[activityId]) {
+                    activityData = data.matin.activites[activityId];
+                    updatePath = `matin.activites.${activityId}`;
+                } else if (data.apresMidi.activites?.[activityId]) {
+                    activityData = data.apresMidi.activites[activityId];
+                    updatePath = `apresMidi.activites.${activityId}`;
+                } else if (data.problematiques.items?.[activityId]) {
+                    activityData = data.problematiques.items[activityId];
+                    updatePath = `problematiques.items.${activityId}`;
+                }
+
+                if (!activityData) {
+                    console.error('Activité non trouvée');
+                    return;
                 }
 
                 // Créer et configurer la zone de texte
@@ -223,7 +239,7 @@
                         placeholder="Saisissez les détails de l'activité ici..."
                     >${activityData.content || ''}</textarea>
                 `;
-                
+
                 // Ajouter l'écouteur d'événements pour la sauvegarde automatique
                 const textarea = document.getElementById('activityContent');
                 let saveTimeout;
@@ -248,7 +264,6 @@
 
                 // Donner le focus à la zone de texte
                 textarea.focus();
-
             } catch (error) {
                 console.error('Erreur:', error);
                 alert('Erreur lors du chargement de l\'activité');
@@ -278,11 +293,14 @@
                 const doc = await userDayRef.get();
                 if (!doc.exists) {
                     await userDayRef.set({
-                        '1_date': today,
-                        '2_title': retourTitle,
-                        '3_matin': { activites: {} },
-                        '4_apresMidi': { activites: {} },
-                        '5_problematiques': { items: {} }
+                        metadata: {
+                            date: today,
+                            title: retourTitle,
+                            order: ['date', 'title', 'matin', 'apresMidi', 'problematiques']
+                        },
+                        matin: { activites: {} },
+                        apresMidi: { activites: {} },
+                        problematiques: { items: {} }
                     });
                     return;
                 }
@@ -291,20 +309,18 @@
 
                 // Mettre à jour le titre dans l'interface
                 const titleElement = document.getElementById('retourTitle');
-                titleElement.textContent = data['2_title'] || retourTitle;
+                titleElement.textContent = data.metadata.title || retourTitle;
 
-                // Charger les activités du matin
-                Object.entries(data['3_matin'].activites || {}).forEach(([id, activity]) => {
+                // Charger les activités
+                Object.entries(data.matin.activites || {}).forEach(([id, activity]) => {
                     addActivityToList('matin', { id, title: activity.title });
                 });
 
-                // Charger les activités de l'après-midi
-                Object.entries(data['4_apresMidi'].activites || {}).forEach(([id, activity]) => {
+                Object.entries(data.apresMidi.activites || {}).forEach(([id, activity]) => {
                     addActivityToList('apresMidi', { id, title: activity.title });
                 });
 
-                // Charger les problématiques
-                Object.entries(data['5_problematiques'].items || {}).forEach(([id, problem]) => {
+                Object.entries(data.problematiques.items || {}).forEach(([id, problem]) => {
                     addActivityToList('problematiques', { id, title: problem.title });
                 });
             } catch (error) {
