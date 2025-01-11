@@ -10,7 +10,8 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/skins/ui/oxide/skin.min.css" rel="stylesheet">
 </head>
 <body>
     <nav class="navbar">
@@ -256,17 +257,20 @@
                     selector: '#activityContent',
                     height: 400,
                     menubar: false,
+                    language: 'fr',
                     plugins: [
-                        'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-                        'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                        'insertdatetime', 'media', 'table', 'help', 'wordcount', 'codesample',
-                        'emoticons'
+                        'lists', 'link', 'image', 'charmap',
+                        'searchreplace', 'code', 'fullscreen',
+                        'insertdatetime', 'table', 'help', 'wordcount'
                     ],
-                    toolbar: 'undo redo | styles | bold italic underline strikethrough | ' +
+                    toolbar: 'undo redo | formatselect | ' +
+                        'bold italic underline strikethrough | ' +
                         'alignleft aligncenter alignright alignjustify | ' +
-                        'bullist numlist outdent indent | link image | ' +
-                        'forecolor backcolor | addcomment | removeformat | help',
+                        'bullist numlist outdent indent | ' +
+                        'forecolor backcolor | removeformat | help',
                     content_style: 'body { font-family: Arial, sans-serif; font-size: 14px; }',
+                    branding: false,
+                    promotion: false,
                     setup: function(editor) {
                         editor.on('Change', function() {
                             if (saveTimeout) clearTimeout(saveTimeout);
@@ -285,11 +289,7 @@
                                 }
                             }, 500);
                         });
-                    },
-                    // Activer les bulles de commentaires
-                    comments: true,
-                    comment_toolbar: 'bold italic strikethrough | bullist numlist | link',
-                    contextmenu: 'comment | link image inserttable | cell row column deletetable'
+                    }
                 });
 
             } catch (error) {
