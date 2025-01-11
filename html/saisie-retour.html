@@ -127,18 +127,15 @@
                 const doc = await userDayRef.get();
                 if (!doc.exists) {
                     await userDayRef.set({
-                        metadata: {
-                            date: today,
-                            title: retourTitle,
-                            order: ['date', 'title', 'matin', 'apresMidi', 'problematiques']
-                        },
-                        matin: {
+                        '1_date': today,
+                        '2_title': retourTitle,
+                        '3_matin': {
                             activites: {}
                         },
-                        apresMidi: {
+                        '4_apresMidi': {
                             activites: {}
                         },
-                        problematiques: {
+                        '5_problematiques': {
                             items: {}
                         }
                     });
@@ -150,11 +147,11 @@
                 // Définir le chemin selon la section
                 let updatePath;
                 if (section === 'matin') {
-                    updatePath = `matin.activites.${activityId}`;
+                    updatePath = `3_matin.activites.${activityId}`;
                 } else if (section === 'apresMidi') {
-                    updatePath = `apresMidi.activites.${activityId}`;
+                    updatePath = `4_apresMidi.activites.${activityId}`;
                 } else {
-                    updatePath = `problematiques.items.${activityId}`;
+                    updatePath = `5_problematiques.items.${activityId}`;
                 }
 
                 // Créer l'objet de mise à jour
@@ -214,15 +211,15 @@
                 let activityData;
                 let updatePath;
 
-                if (data.matin.activites?.[activityId]) {
-                    activityData = data.matin.activites[activityId];
-                    updatePath = `matin.activites.${activityId}`;
-                } else if (data.apresMidi.activites?.[activityId]) {
-                    activityData = data.apresMidi.activites[activityId];
-                    updatePath = `apresMidi.activites.${activityId}`;
-                } else if (data.problematiques.items?.[activityId]) {
-                    activityData = data.problematiques.items[activityId];
-                    updatePath = `problematiques.items.${activityId}`;
+                if (data['3_matin'].activites?.[activityId]) {
+                    activityData = data['3_matin'].activites[activityId];
+                    updatePath = `3_matin.activites.${activityId}`;
+                } else if (data['4_apresMidi'].activites?.[activityId]) {
+                    activityData = data['4_apresMidi'].activites[activityId];
+                    updatePath = `4_apresMidi.activites.${activityId}`;
+                } else if (data['5_problematiques'].items?.[activityId]) {
+                    activityData = data['5_problematiques'].items[activityId];
+                    updatePath = `5_problematiques.items.${activityId}`;
                 }
 
                 if (!activityData) {
@@ -293,14 +290,11 @@
                 const doc = await userDayRef.get();
                 if (!doc.exists) {
                     await userDayRef.set({
-                        metadata: {
-                            date: today,
-                            title: retourTitle,
-                            order: ['date', 'title', 'matin', 'apresMidi', 'problematiques']
-                        },
-                        matin: { activites: {} },
-                        apresMidi: { activites: {} },
-                        problematiques: { items: {} }
+                        '1_date': today,
+                        '2_title': retourTitle,
+                        '3_matin': { activites: {} },
+                        '4_apresMidi': { activites: {} },
+                        '5_problematiques': { items: {} }
                     });
                     return;
                 }
@@ -309,18 +303,18 @@
 
                 // Mettre à jour le titre dans l'interface
                 const titleElement = document.getElementById('retourTitle');
-                titleElement.textContent = data.metadata.title || retourTitle;
+                titleElement.textContent = data['2_title'] || retourTitle;
 
-                // Charger les activités
-                Object.entries(data.matin.activites || {}).forEach(([id, activity]) => {
+                // Charger les activités avec les bons chemins
+                Object.entries(data['3_matin'].activites || {}).forEach(([id, activity]) => {
                     addActivityToList('matin', { id, title: activity.title });
                 });
 
-                Object.entries(data.apresMidi.activites || {}).forEach(([id, activity]) => {
+                Object.entries(data['4_apresMidi'].activites || {}).forEach(([id, activity]) => {
                     addActivityToList('apresMidi', { id, title: activity.title });
                 });
 
-                Object.entries(data.problematiques.items || {}).forEach(([id, problem]) => {
+                Object.entries(data['5_problematiques'].items || {}).forEach(([id, problem]) => {
                     addActivityToList('problematiques', { id, title: problem.title });
                 });
             } catch (error) {
