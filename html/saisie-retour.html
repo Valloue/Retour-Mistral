@@ -307,8 +307,15 @@
                         const range = selection.getRangeAt(0);
                         const currentNode = range.startContainer;
                         
+                        // Remonter jusqu'à l'élément parent le plus proche
+                        let element = currentNode;
+                        while (element && element.nodeType === 3) { // 3 = Node.TEXT_NODE
+                            element = element.parentElement;
+                        }
+                        
                         // Vérifier si on est dans une liste
-                        const listItem = currentNode.closest('li');
+                        const listItem = element ? element.closest('li') : null;
+                        
                         if (listItem) {
                             if (e.key === 'Tab') {
                                 e.preventDefault();
