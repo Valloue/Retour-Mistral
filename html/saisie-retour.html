@@ -134,30 +134,60 @@
         }
 
         async function selectActivity(activityId) {
-            // Désélectionner l'activité précédente
-            document.querySelectorAll('.activity-item.active').forEach(item => {
-                item.classList.remove('active');
-            });
+            try {
+                // Désélectionner l'activité précédente
+                document.querySelectorAll('.activity-item.active').forEach(item => {
+                    item.classList.remove('active');
+                });
 
-            // Sélectionner la nouvelle activité
-            const activityElement = document.querySelector(`[data-id="${activityId}"]`);
-            activityElement.classList.add('active');
+                // Sélectionner la nouvelle activité
+                const activityElement = document.querySelector(`[data-id="${activityId}"]`);
+                activityElement.classList.add('active');
 
-            // Charger le contenu de l'activité
-            const editor = document.getElementById('editor');
-            editor.innerHTML = '<textarea id="activityContent" style="width: 100%; height: 400px;"></textarea>';
-            
-            const textarea = document.getElementById('activityContent');
-            textarea.addEventListener('input', async () => {
-                try {
-                    await window.db.collection('activities').doc(activityId).update({
-                        content: textarea.value,
-                        updatedAt: new Date().toISOString()
-                    });
-                } catch (error) {
-                    console.error('Erreur lors de la sauvegarde:', error);
-                }
-            });
+                // Récupérer les données de l'activité
+                const activityDoc = await window.db.collection('activities').doc(activityId).get();
+                const activityData = activityDoc.data();
+
+                // Créer et configurer la zone de texte
+                const editor = document.getElementById('editor');
+                editor.innerHTML = `
+                    <textarea 
+                        id="activityContent" 
+                        style="width: 100%; height: 400px; padding: 12px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"
+                        placeholder="Saisissez les détails de l'activité ici..."
+                    >${activityData.content || ''}</textarea>
+                `;
+                
+                // Ajouter l'écouteur d'événements pour la sauvegarde automatique
+                const textarea = document.getElementById('activityContent');
+                let saveTimeout;
+
+                textarea.addEventListener('input', () => {
+                    // Annuler le timeout précédent
+                    if (saveTimeout) clearTimeout(saveTimeout);
+
+                    // Définir un nouveau timeout pour sauvegarder après 500ms d'inactivité
+                    saveTimeout = setTimeout(async () => {
+                        try {
+                            await window.db.collection('activities').doc(activityId).update({
+                                content: textarea.value,
+                                updatedAt: new Date().toISOString()
+                            });
+                            console.log('Contenu sauvegardé');
+                        } catch (error) {
+                            console.error('Erreur lors de la sauvegarde:', error);
+                            alert('Erreur lors de la sauvegarde des modifications');
+                        }
+                    }, 500);
+                });
+
+                // Donner le focus à la zone de texte
+                textarea.focus();
+
+            } catch (error) {
+                console.error('Erreur lors du chargement de l\'activité:', error);
+                alert('Erreur lors du chargement de l\'activité');
+            }
         }
 
         // Charger les activités existantes
