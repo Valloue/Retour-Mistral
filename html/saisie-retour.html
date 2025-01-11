@@ -463,39 +463,6 @@
             const month = String(date.getMonth() + 1).padStart(2, '0');
             return `${day}/${month}`;
         }
-
-        // Fonction pour mettre à jour le titre du retour
-        async function updateRetourTitle() {
-            try {
-                const user = window.auth.currentUser;
-                if (!user) return;
-
-                // Récupérer les données de l'utilisateur
-                const userDoc = await window.db.collection('users').doc(user.uid).get();
-                const userData = userDoc.data();
-                const username = userData.username;
-
-                // Formater la date
-                const today = new Date();
-                const formattedDate = formatDate(today);
-
-                // Mettre à jour le titre
-                const titleElement = document.getElementById('retourTitle');
-                titleElement.textContent = `Retour ${username} ${formattedDate}`;
-            } catch (error) {
-                console.error('Erreur lors de la mise à jour du titre:', error);
-            }
-        }
-
-        // Mettre à jour le titre quand l'utilisateur est authentifié
-        window.auth.onAuthStateChanged((user) => {
-            if (user) {
-                updateRetourTitle();
-                loadActivities();
-            } else {
-                window.location.href = 'login.html';
-            }
-        });
     </script>
 </body>
 </html> 
