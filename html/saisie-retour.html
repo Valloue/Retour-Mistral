@@ -6,6 +6,10 @@
     <title>RetourMistral - Saisie Retour</title>
     <link rel="stylesheet" href="../css/common.css">
     <link rel="stylesheet" href="../css/saisie-retour.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <nav class="navbar">
@@ -46,6 +50,141 @@
         </div>
     </div>
 
-    <script type="module" src="../js/saisie-retour.js"></script>
+    <!-- Initialisation Firebase -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEvK9CVWCmNGmOvHtwNnEJ65A_33JgSq0",
+            authDomain: "retour-mistral.firebaseapp.com",
+            projectId: "retour-mistral",
+            storageBucket: "retour-mistral.firebasestorage.app",
+            messagingSenderId: "663337089772",
+            appId: "1:663337089772:web:034e2446b73fa9701f03c9"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        window.auth = firebase.auth();
+        window.db = firebase.firestore();
+    </script>
+
+    <!-- Logique de l'application -->
+    <script>
+        // Vérification de l'authentification
+        window.auth.onAuthStateChanged((user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+            }
+        });
+
+        // Gestion de la déconnexion
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            try {
+                await window.auth.signOut();
+                window.location.href = 'login.html';
+            } catch (error) {
+                console.error('Erreur lors de la déconnexion:', error);
+            }
+        });
+
+        // Gestion des activités
+        const addButtons = document.querySelectorAll('.add-btn');
+        const activitesLists = {
+            matin: document.getElementById('activitesMatin'),
+            apresMidi: document.getElementById('activitesApresMidi'),
+            problematiques: document.getElementById('problematiques')
+        };
+
+        addButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const section = button.dataset.section;
+                createNewActivity(section);
+            });
+        });
+
+        async function createNewActivity(section) {
+            const title = prompt(`Nouvelle activité ${section}`);
+            if (!title) return;
+
+            try {
+                const docRef = await window.db.collection('activities').add({
+                    userId: window.auth.currentUser.uid,
+                    section,
+                    title,
+                    content: '',
+                    createdAt: new Date().toISOString()
+                });
+
+                addActivityToList(section, {
+                    id: docRef.id,
+                    title
+                });
+            } catch (error) {
+                console.error('Erreur lors de la création de l\'activité:', error);
+                alert('Erreur lors de la création de l\'activité');
+            }
+        }
+
+        function addActivityToList(section, activity) {
+            const div = document.createElement('div');
+            div.className = 'activity-item';
+            div.dataset.id = activity.id;
+            div.textContent = activity.title;
+            div.onclick = () => selectActivity(activity.id);
+
+            activitesLists[section].appendChild(div);
+        }
+
+        async function selectActivity(activityId) {
+            // Désélectionner l'activité précédente
+            document.querySelectorAll('.activity-item.active').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // Sélectionner la nouvelle activité
+            const activityElement = document.querySelector(`[data-id="${activityId}"]`);
+            activityElement.classList.add('active');
+
+            // Charger le contenu de l'activité
+            const editor = document.getElementById('editor');
+            editor.innerHTML = '<textarea id="activityContent" style="width: 100%; height: 400px;"></textarea>';
+            
+            const textarea = document.getElementById('activityContent');
+            textarea.addEventListener('input', async () => {
+                try {
+                    await window.db.collection('activities').doc(activityId).update({
+                        content: textarea.value,
+                        updatedAt: new Date().toISOString()
+                    });
+                } catch (error) {
+                    console.error('Erreur lors de la sauvegarde:', error);
+                }
+            });
+        }
+
+        // Charger les activités existantes
+        async function loadActivities() {
+            try {
+                const snapshot = await window.db.collection('activities')
+                    .where('userId', '==', window.auth.currentUser.uid)
+                    .get();
+                
+                snapshot.forEach((doc) => {
+                    const activity = {
+                        id: doc.id,
+                        ...doc.data()
+                    };
+                    addActivityToList(activity.section, activity);
+                });
+            } catch (error) {
+                console.error('Erreur lors du chargement des activités:', error);
+            }
+        }
+
+        // Charger les activités une fois l'authentification établie
+        window.auth.onAuthStateChanged((user) => {
+            if (user) {
+                loadActivities();
+            }
+        });
+    </script>
 </body>
 </html> 

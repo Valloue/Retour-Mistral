@@ -6,6 +6,10 @@
     <title>RetourMistral - Connexion</title>
     <link rel="stylesheet" href="../css/auth.css">
     <link rel="stylesheet" href="../css/common.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <div class="auth-container">
@@ -23,6 +27,57 @@
             <p>Pas encore de compte ? <a href="register.html">S'inscrire</a></p>
         </div>
     </div>
-    <script type="module" src="../js/auth.js"></script>
+
+    <!-- Initialisation Firebase -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEvK9CVWCmNGmOvHtwNnEJ65A_33JgSq0",
+            authDomain: "retour-mistral.firebaseapp.com",
+            projectId: "retour-mistral",
+            storageBucket: "retour-mistral.firebasestorage.app",
+            messagingSenderId: "663337089772",
+            appId: "1:663337089772:web:034e2446b73fa9701f03c9"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        window.auth = firebase.auth();
+    </script>
+
+    <!-- Logique de connexion -->
+    <script>
+        const loginForm = document.getElementById('loginForm');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                await window.auth.signInWithEmailAndPassword(email, password);
+                window.location.href = 'saisie-retour.html';
+            } catch (error) {
+                console.error('Erreur de connexion:', error);
+                let errorMessage = 'Erreur de connexion.';
+                
+                switch (error.code) {
+                    case 'auth/invalid-email':
+                        errorMessage = 'Email invalide.';
+                        break;
+                    case 'auth/user-disabled':
+                        errorMessage = 'Ce compte a été désactivé.';
+                        break;
+                    case 'auth/user-not-found':
+                        errorMessage = 'Aucun compte trouvé avec cet email.';
+                        break;
+                    case 'auth/wrong-password':
+                        errorMessage = 'Mot de passe incorrect.';
+                        break;
+                }
+                
+                alert(errorMessage);
+            }
+        });
+    </script>
 </body>
 </html> 

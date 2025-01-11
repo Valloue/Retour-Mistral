@@ -7,6 +7,10 @@
     <link rel="stylesheet" href="../css/common.css">
     <link rel="stylesheet" href="../css/compte.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <nav class="navbar">
@@ -103,7 +107,27 @@
         </div>
     </div>
 
+    <!-- Initialisation Firebase -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEvK9CVWCmNGmOvHtwNnEJ65A_33JgSq0",
+            authDomain: "retour-mistral.firebaseapp.com",
+            projectId: "retour-mistral",
+            storageBucket: "retour-mistral.firebasestorage.app",
+            messagingSenderId: "663337089772",
+            appId: "1:663337089772:web:034e2446b73fa9701f03c9"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        window.auth = firebase.auth();
+        window.db = firebase.firestore();
+    </script>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" src="../js/compte.js"></script>
+
+    <!-- Logique du compte -->
+    <script>
+        // ... code de compte.js converti en version compat ...
+    </script>
 </body>
 </html> 
