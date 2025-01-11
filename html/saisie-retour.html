@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RetourMistral - Saisie Retour</title>
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/saisie-retour.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">RetourMistral</div>
+        <div class="nav-links">
+            <a href="saisie-retour.html" class="active">Saisie Retour</a>
+            <a href="consultation.html">Consultation</a>
+            <a href="compte.html">Mon Compte</a>
+        </div>
+        <button id="logoutBtn" class="logout-btn">Déconnexion</button>
+    </nav>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="section">
+                <h2>Activités Matin</h2>
+                <div id="activitesMatin" class="activities-list"></div>
+                <button class="add-btn" data-section="matin">+ Ajouter une activité</button>
+            </div>
+
+            <div class="section">
+                <h2>Activités Après-midi</h2>
+                <div id="activitesApresMidi" class="activities-list"></div>
+                <button class="add-btn" data-section="apresMidi">+ Ajouter une activité</button>
+            </div>
+
+            <div class="section">
+                <h2>Problématiques</h2>
+                <div id="problematiques" class="activities-list"></div>
+                <button class="add-btn" data-section="problematiques">+ Ajouter une problématique</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div id="editor" class="editor">
+                <p>Sélectionnez une activité pour commencer l'édition...</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="../js/saisie-retour.js"></script>
+</body>
+</html> 

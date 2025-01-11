@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RetourMistral - Mon Compte</title>
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/compte.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">RetourMistral</div>
+        <div class="nav-links">
+            <a href="saisie-retour.html">Saisie Retour</a>
+            <a href="consultation.html">Consultation</a>
+            <a href="compte.html" class="active">Mon Compte</a>
+        </div>
+        <button id="logoutBtn" class="logout-btn">Déconnexion</button>
+    </nav>
+
+    <div class="container">
+        <div class="dashboard">
+            <div class="profile-section">
+                <div class="profile-header">
+                    <h2>Profil Utilisateur</h2>
+                    <button id="editProfileBtn" class="edit-btn">Modifier</button>
+                </div>
+                <div class="profile-info">
+                    <div class="info-group">
+                        <label>Pseudo</label>
+                        <p id="username"></p>
+                    </div>
+                    <div class="info-group">
+                        <label>Email</label>
+                        <p id="email"></p>
+                    </div>
+                    <div class="info-group">
+                        <label>Date d'inscription</label>
+                        <p id="createdAt"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total des Retours</h3>
+                    <div class="stat-value" id="totalRetours">0</div>
+                    <canvas id="retoursTrendChart"></canvas>
+                </div>
+                <div class="stat-card">
+                    <h3>Activités par Type</h3>
+                    <canvas id="activitesTypeChart"></canvas>
+                </div>
+                <div class="stat-card">
+                    <h3>Problématiques Récentes</h3>
+                    <div id="recentIssues" class="issues-list"></div>
+                </div>
+                <div class="stat-card">
+                    <h3>Activité Hebdomadaire</h3>
+                    <canvas id="weeklyActivityChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de modification du profil -->
+    <div id="editProfileModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Modifier le profil</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="editProfileForm">
+                <div class="form-group">
+                    <label for="editUsername">Pseudo</label>
+                    <input type="text" 
+                           id="editUsername" 
+                           name="username"
+                           placeholder="Votre pseudo" 
+                           title="Entrez votre pseudo"
+                           required>
+                </div>
+                <div class="form-group">
+                    <label for="editEmail">Email</label>
+                    <input type="email" 
+                           id="editEmail" 
+                           name="email"
+                           placeholder="Votre email" 
+                           title="Entrez votre adresse email"
+                           required>
+                </div>
+                <div class="form-group">
+                    <label for="editPassword">Nouveau mot de passe (optionnel)</label>
+                    <input type="password" 
+                           id="editPassword"
+                           name="password" 
+                           placeholder="Laissez vide pour ne pas modifier"
+                           title="Minimum 10 caractères, 1 majuscule, 1 minuscule, 1 chiffre et 1 caractère spécial">
+                </div>
+                <button type="submit" class="save-btn">Enregistrer</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module" src="../js/compte.js"></script>
+</body>
+</html> 

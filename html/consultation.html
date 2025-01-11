@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RetourMistral - Consultation</title>
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/consultation.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">RetourMistral</div>
+        <div class="nav-links">
+            <a href="saisie-retour.html">Saisie Retour</a>
+            <a href="consultation.html" class="active">Consultation</a>
+            <a href="compte.html">Mon Compte</a>
+        </div>
+        <button id="logoutBtn" class="logout-btn">Déconnexion</button>
+    </nav>
+
+    <div class="container">
+        <div class="filters">
+            <div class="date-picker">
+                <input type="text" id="datePicker" placeholder="Sélectionner une date">
+            </div>
+        </div>
+
+        <div class="board">
+            <div class="column">
+                <h2>Activités Matin</h2>
+                <div id="matinList" class="card-list"></div>
+            </div>
+            
+            <div class="column">
+                <h2>Activités Après-midi</h2>
+                <div id="apresMidiList" class="card-list"></div>
+            </div>
+            
+            <div class="column">
+                <h2>Problématiques</h2>
+                <div id="problematiquesList" class="card-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/fr.js"></script>
+    <script type="module" src="../js/consultation.js"></script>
+</body>
+</html> 
