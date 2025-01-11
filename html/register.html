@@ -6,6 +6,9 @@
     <title>RetourMistral - Inscription</title>
     <link rel="stylesheet" href="../css/auth.css">
     <link rel="stylesheet" href="../css/common.css">
+    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <div class="auth-container">
@@ -36,6 +39,24 @@
             <p>Déjà inscrit ? <a href="login.html">Se connecter</a></p>
         </div>
     </div>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.x.x/firebase-app.js';
+        import { getAuth } from 'https://www.gstatic.com/firebasejs/9.x.x/firebase-auth.js';
+        import { getFirestore } from 'https://www.gstatic.com/firebasejs/9.x.x/firebase-firestore.js';
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEvK9CVWCmNGmOvHtwNnEJ65A_33JgSq0",
+            authDomain: "retour-mistral.firebaseapp.com",
+            projectId: "retour-mistral",
+            storageBucket: "retour-mistral.firebasestorage.app",
+            messagingSenderId: "663337089772",
+            appId: "1:663337089772:web:034e2446b73fa9701f03c9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        window.auth = getAuth(app);
+        window.db = getFirestore(app);
+    </script>
     <script type="module" src="../js/register.js"></script>
 </body>
 </html> 

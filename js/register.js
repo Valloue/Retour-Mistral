@@ -1,6 +1,6 @@
-import { auth, db } from './firebase-config.js';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+// Utilisation des objets Firebase globaux au lieu des imports
+const auth = window.auth;
+const db = window.db;
 
 console.log('Register.js chargé');
 
