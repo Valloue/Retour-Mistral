@@ -125,44 +125,23 @@
 
 .editor-toolbar {
     display: flex;
-    gap: 15px;
+    gap: 5px;
     padding: 10px;
     background: #f8f9fa;
-    border-radius: 8px 8px 0 0;
     border-bottom: 1px solid #dee2e6;
 }
 
-.toolbar-group {
-    display: flex;
-    gap: 5px;
-    padding: 0 10px;
-    border-right: 1px solid #dee2e6;
-}
-
-.toolbar-group:last-child {
-    border-right: none;
-}
-
 .editor-toolbar button {
-    padding: 8px 12px;
+    padding: 8px 16px;
     border: 1px solid #dee2e6;
     background: white;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 14px;
-    min-width: 35px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    font-weight: bold;
 }
 
 .editor-toolbar button:hover {
     background: #e9ecef;
-}
-
-.editor-toolbar button.active {
-    background: #e2e6ea;
-    border-color: #adb5bd;
 }
 
 .editor-content {
@@ -175,36 +154,25 @@
     flex-grow: 1;
     padding: 20px;
     background: white;
-    border-radius: 0 0 8px 8px;
     min-height: 400px;
     outline: none;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 14px;
     line-height: 1.6;
-    color: #333;
     overflow-y: auto;
-}
-
-.editable-content:empty:before {
-    content: attr(placeholder);
-    color: #999;
 }
 
 .editable-content:focus {
     outline: none;
 }
 
-/* Styles pour les listes dans l'éditeur */
-.editable-content ul,
-.editable-content ol {
-    padding-left: 25px;
-    margin: 10px 0;
-}
-
-.editable-content ul li {
+/* Styles pour les listes */
+.editable-content ul {
     list-style-type: disc;
+    padding-left: 20px;
 }
 
-.editable-content ol li {
+.editable-content ol {
     list-style-type: decimal;
+    padding-left: 20px;
 } 
