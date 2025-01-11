@@ -109,6 +109,14 @@
                 const userId = window.auth.currentUser.uid;
                 const today = new Date().toISOString().split('T')[0];
                 
+                // Récupérer le nom d'utilisateur
+                const userDoc = await window.db.collection('users').doc(userId).get();
+                const username = userDoc.data().username;
+                
+                // Formater la date pour le titre
+                const formattedDate = formatDate(new Date());
+                const retourTitle = `Retour ${username} ${formattedDate}`;
+                
                 // Créer/obtenir le document du jour pour l'utilisateur
                 const userDayRef = window.db.collection('users')
                     .doc(userId)
@@ -118,16 +126,17 @@
                 // Vérifier si le document existe déjà
                 const doc = await userDayRef.get();
                 if (!doc.exists) {
-                    // Créer la structure initiale du jour
+                    // Créer la structure initiale du jour avec le titre et l'ordre forcé
                     await userDayRef.set({
-                        date: today,
-                        matin: {
+                        '1_date': today,
+                        '2_title': retourTitle,
+                        '3_matin': {
                             activites: {}
                         },
-                        apresMidi: {
+                        '4_apresMidi': {
                             activites: {}
                         },
-                        problematiques: {
+                        '5_problematiques': {
                             items: {}
                         }
                     });
@@ -139,11 +148,11 @@
                 // Définir le chemin selon la section
                 let updatePath;
                 if (section === 'matin') {
-                    updatePath = `matin.activites.${activityId}`;
+                    updatePath = `3_matin.activites.${activityId}`;
                 } else if (section === 'apresMidi') {
-                    updatePath = `apresMidi.activites.${activityId}`;
+                    updatePath = `4_apresMidi.activites.${activityId}`;
                 } else {
-                    updatePath = `problematiques.items.${activityId}`;
+                    updatePath = `5_problematiques.items.${activityId}`;
                 }
 
                 // Créer l'objet de mise à jour
@@ -194,15 +203,15 @@
                 let activityData;
                 let updatePath;
 
-                if (data.matin.activites?.[activityId]) {
-                    activityData = data.matin.activites[activityId];
-                    updatePath = `matin.activites.${activityId}`;
-                } else if (data.apresMidi.activites?.[activityId]) {
-                    activityData = data.apresMidi.activites[activityId];
-                    updatePath = `apresMidi.activites.${activityId}`;
-                } else if (data.problematiques.items?.[activityId]) {
-                    activityData = data.problematiques.items[activityId];
-                    updatePath = `problematiques.items.${activityId}`;
+                if (data['3_matin'].activites?.[activityId]) {
+                    activityData = data['3_matin'].activites[activityId];
+                    updatePath = `3_matin.activites.${activityId}`;
+                } else if (data['4_apresMidi'].activites?.[activityId]) {
+                    activityData = data['4_apresMidi'].activites[activityId];
+                    updatePath = `4_apresMidi.activites.${activityId}`;
+                } else if (data['5_problematiques'].items?.[activityId]) {
+                    activityData = data['5_problematiques'].items[activityId];
+                    updatePath = `5_problematiques.items.${activityId}`;
                 }
 
                 // Créer et configurer la zone de texte
@@ -252,6 +261,14 @@
                 const userId = window.auth.currentUser.uid;
                 const today = new Date().toISOString().split('T')[0];
                 
+                // Récupérer le nom d'utilisateur
+                const userDoc = await window.db.collection('users').doc(userId).get();
+                const username = userDoc.data().username;
+                
+                // Formater la date pour le titre
+                const formattedDate = formatDate(new Date());
+                const retourTitle = `Retour ${username} ${formattedDate}`;
+                
                 // Récupérer le document du jour pour l'utilisateur
                 const userDayRef = window.db.collection('users')
                     .doc(userId)
@@ -260,30 +277,34 @@
 
                 const doc = await userDayRef.get();
                 if (!doc.exists) {
-                    // Créer un nouveau document si c'est le premier accès du jour
                     await userDayRef.set({
-                        date: today,
-                        matin: { activites: {} },
-                        apresMidi: { activites: {} },
-                        problematiques: { items: {} }
+                        '1_date': today,
+                        '2_title': retourTitle,
+                        '3_matin': { activites: {} },
+                        '4_apresMidi': { activites: {} },
+                        '5_problematiques': { items: {} }
                     });
                     return;
                 }
 
                 const data = doc.data();
 
+                // Mettre à jour le titre dans l'interface
+                const titleElement = document.getElementById('retourTitle');
+                titleElement.textContent = data['2_title'] || retourTitle;
+
                 // Charger les activités du matin
-                Object.entries(data.matin.activites || {}).forEach(([id, activity]) => {
+                Object.entries(data['3_matin'].activites || {}).forEach(([id, activity]) => {
                     addActivityToList('matin', { id, title: activity.title });
                 });
 
                 // Charger les activités de l'après-midi
-                Object.entries(data.apresMidi.activites || {}).forEach(([id, activity]) => {
+                Object.entries(data['4_apresMidi'].activites || {}).forEach(([id, activity]) => {
                     addActivityToList('apresMidi', { id, title: activity.title });
                 });
 
                 // Charger les problématiques
-                Object.entries(data.problematiques.items || {}).forEach(([id, problem]) => {
+                Object.entries(data['5_problematiques'].items || {}).forEach(([id, problem]) => {
                     addActivityToList('problematiques', { id, title: problem.title });
                 });
             } catch (error) {
