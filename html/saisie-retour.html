@@ -386,28 +386,9 @@
             }
         }
 
-        // Ajouter une variable globale pour le timer de sauvegarde automatique
-        let autoSaveInterval;
-
-        // Modifier la fonction selectActivity pour ajouter la sauvegarde automatique
+        // Modifier la fonction selectActivity pour supprimer la sauvegarde automatique
         async function selectActivity(activityId) {
             try {
-                // Sauvegarder l'activité précédente si elle existe
-                const previousContent = document.getElementById('activityContent');
-                if (previousContent && previousContent.dataset.updatePath) {
-                    await saveContentWithCorrection(
-                        previousContent,
-                        previousContent.dataset.updatePath,
-                        window.auth.currentUser.uid,
-                        getUrlParameter('date') || new Date().toISOString().split('T')[0]
-                    );
-                }
-
-                // Arrêter l'intervalle de sauvegarde précédent
-                if (autoSaveInterval) {
-                    clearInterval(autoSaveInterval);
-                }
-
                 const userId = window.auth.currentUser.uid;
                 const dateParam = getUrlParameter('date') || new Date().toISOString().split('T')[0];
                 
@@ -453,6 +434,7 @@
                             <button onclick="formatDoc('insertunorderedlist')" title="Liste à puces">•</button>
                             <button onclick="formatDoc('insertorderedlist')" title="Liste numérotée">1.</button>
                             <button onclick="correctContent()" title="Corriger" class="correct-btn">✓</button>
+                            <button onclick="saveCurrentActivity()" title="Sauvegarder" class="save-btn">💾</button>
                         </div>
                         <div id="activityContent" 
                              class="editable-content" 
@@ -469,28 +451,6 @@
 
                 const contentDiv = document.getElementById('activityContent');
                 let saveTimeout;
-
-                contentDiv.addEventListener('input', () => {
-                    if (saveTimeout) clearTimeout(saveTimeout);
-                    
-                    saveTimeout = setTimeout(async () => {
-                        try {
-                            const update = {};
-                            update[`${updatePath}.content`] = contentDiv.innerHTML;
-                            update[`${updatePath}.updatedAt`] = new Date().toISOString();
-
-                            await window.db.collection('users')
-                                .doc(userId)
-                                .collection('retours')
-                                .doc(dateParam)
-                                .update(update);
-                            
-                        } catch (error) {
-                            console.error('Erreur lors de la sauvegarde:', error);
-                            showNotification('Erreur lors de la sauvegarde', 'error');
-                        }
-                    }, 1000);
-                });
 
                 // Gestion des puces
                 contentDiv.addEventListener('keydown', (e) => {
@@ -601,51 +561,11 @@
 
                 contentDiv.focus();
 
-                // Ajouter l'auto-sauvegarde toutes les 30 secondes
-                autoSaveInterval = setInterval(async () => {
-                    const contentDiv = document.getElementById('activityContent');
-                    if (contentDiv && contentDiv.dataset.updatePath) {
-                        await saveContentWithCorrection(
-                            contentDiv,
-                            contentDiv.dataset.updatePath,
-                            userId,
-                            dateParam
-                        );
-                    }
-                }, 30000); // 30 secondes
-
             } catch (error) {
-                console.error('Erreur:', error);
-                showNotification('Une erreur est survenue', 'error');
+                console.error('Erreur lors de la sélection:', error);
+                showNotification('Erreur lors de la sélection', 'error');
             }
         }
-
-        // Modifier l'événement beforeunload pour une approche synchrone
-        window.addEventListener('beforeunload', (e) => {
-            const contentDiv = document.getElementById('activityContent');
-            if (contentDiv && contentDiv.dataset.updatePath) {
-                e.preventDefault();
-                e.returnValue = '';
-
-                // Sauvegarder dans Firebase de manière synchrone
-                const saveXhr = new XMLHttpRequest();
-                saveXhr.open('POST', `${window.location.origin}/save-content`, false);
-                saveXhr.setRequestHeader('Content-Type', 'application/json');
-                saveXhr.send(JSON.stringify({
-                    content: contentDiv.innerHTML,
-                    path: contentDiv.dataset.updatePath,
-                    userId: window.auth.currentUser.uid,
-                    date: getUrlParameter('date') || new Date().toISOString().split('T')[0]
-                }));
-            }
-        });
-
-        // Ajouter un événement pour nettoyer l'intervalle quand on quitte la page
-        window.addEventListener('unload', () => {
-            if (autoSaveInterval) {
-                clearInterval(autoSaveInterval);
-            }
-        });
 
         function formatDate(date) {
             const day = String(date.getDate()).padStart(2, '0');
@@ -782,6 +702,28 @@
             } catch (error) {
                 console.error('Erreur lors de la suppression:', error);
                 showNotification('Erreur lors de la suppression', 'error');
+            }
+        }
+
+        // Ajouter la fonction de sauvegarde manuelle
+        async function saveCurrentActivity() {
+            const contentDiv = document.getElementById('activityContent');
+            if (!contentDiv || !contentDiv.dataset.updatePath) {
+                showNotification('Aucune activité sélectionnée', 'error');
+                return;
+            }
+
+            try {
+                await saveContentWithCorrection(
+                    contentDiv,
+                    contentDiv.dataset.updatePath,
+                    window.auth.currentUser.uid,
+                    getUrlParameter('date') || new Date().toISOString().split('T')[0]
+                );
+                showNotification('Activité sauvegardée avec succès');
+            } catch (error) {
+                console.error('Erreur lors de la sauvegarde:', error);
+                showNotification('Erreur lors de la sauvegarde', 'error');
             }
         }
     </script>
