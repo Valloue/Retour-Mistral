@@ -68,6 +68,22 @@
         </div>
     </div>
 
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Confirmation de suppression</h2>
+            </div>
+            <div class="modal-body">
+                <p>Voulez-vous vraiment supprimer ce rapport ?</p>
+                <p>Cette action est irréversible.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeDeleteModal()">Annuler</button>
+                <button class="btn btn-danger" onclick="confirmDelete()">Supprimer</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Configuration Firebase
         const firebaseConfig = {
@@ -146,7 +162,15 @@
             // Afficher les activités du matin
             const matinList = document.getElementById('activitesMatin');
             matinList.innerHTML = '';
-            Object.values(data['3_matin'].activites || {}).forEach(activity => {
+            const matinActivities = Object.entries(data['3_matin']?.activites || {})
+                .map(([id, activity]) => ({
+                    id,
+                    ...activity,
+                    number: parseInt(activity.title.match(/\d+$/)?.[0] || '0')
+                }))
+                .sort((a, b) => a.number - b.number);
+            
+            matinActivities.forEach(activity => {
                 const div = createActivityElement(activity);
                 matinList.appendChild(div);
             });
@@ -154,7 +178,15 @@
             // Afficher les activités de l'après-midi
             const apresMidiList = document.getElementById('activitesApresMidi');
             apresMidiList.innerHTML = '';
-            Object.values(data['4_apresMidi'].activites || {}).forEach(activity => {
+            const apresMidiActivities = Object.entries(data['4_apresMidi']?.activites || {})
+                .map(([id, activity]) => ({
+                    id,
+                    ...activity,
+                    number: parseInt(activity.title.match(/\d+$/)?.[0] || '0')
+                }))
+                .sort((a, b) => a.number - b.number);
+            
+            apresMidiActivities.forEach(activity => {
                 const div = createActivityElement(activity);
                 apresMidiList.appendChild(div);
             });
@@ -162,7 +194,15 @@
             // Afficher les problématiques
             const problemesList = document.getElementById('problematiques');
             problemesList.innerHTML = '';
-            Object.values(data['5_problematiques'].items || {}).forEach(problem => {
+            const problematiques = Object.entries(data['5_problematiques']?.items || {})
+                .map(([id, problem]) => ({
+                    id,
+                    ...problem,
+                    number: parseInt(problem.title.match(/\d+$/)?.[0] || '0')
+                }))
+                .sort((a, b) => a.number - b.number);
+            
+            problematiques.forEach(problem => {
                 const div = createActivityElement(problem);
                 problemesList.appendChild(div);
             });
@@ -238,24 +278,49 @@
             }
         }
 
+        let currentDateToDelete = null;
+
+        function showDeleteModal(date) {
+            currentDateToDelete = date;
+            const modal = document.getElementById('deleteModal');
+            modal.style.display = 'flex';
+        }
+
+        function closeDeleteModal() {
+            const modal = document.getElementById('deleteModal');
+            modal.style.display = 'none';
+            currentDateToDelete = null;
+        }
+
         async function deleteRetour() {
-            const date = document.getElementById('dateSelector').value;
-            if (confirm('Voulez-vous vraiment supprimer ce rapport ?')) {
-                try {
-                    const userId = window.auth.currentUser.uid;
-                    await window.db.collection('users')
-                        .doc(userId)
-                        .collection('retours')
-                        .doc(date)
-                        .delete();
-                    
-                    clearContent();
-                    await loadRetoursList(); // Recharger la liste
-                    showNotification('Rapport supprimé avec succès');
-                } catch (error) {
-                    console.error('Erreur lors de la suppression:', error);
-                    showNotification('Une erreur est survenue', 'error');
-                }
+            showDeleteModal(document.getElementById('dateSelector').value);
+        }
+
+        async function confirmDelete() {
+            if (!currentDateToDelete) return;
+            
+            try {
+                const userId = window.auth.currentUser.uid;
+                await window.db.collection('users')
+                    .doc(userId)
+                    .collection('retours')
+                    .doc(currentDateToDelete)
+                    .delete();
+                
+                clearContent();
+                await loadRetoursList();
+                showNotification('Rapport supprimé avec succès');
+                closeDeleteModal();
+            } catch (error) {
+                console.error('Erreur lors de la suppression:', error);
+                showNotification('Une erreur est survenue', 'error');
+            }
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('deleteModal');
+            if (event.target === modal) {
+                closeDeleteModal();
             }
         }
 
