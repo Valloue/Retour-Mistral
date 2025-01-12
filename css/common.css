@@ -162,23 +162,6 @@ a:hover {
     margin-bottom: 16px;
 }
 
-.theme-selector {
-    margin-right: 20px;
-}
-
-.theme-selector select {
-    padding: 5px 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-    cursor: pointer;
-}
-
-.theme-selector select:hover {
-    border-color: var(--accent-color);
-}
-
 .add-btn {
     background: linear-gradient(45deg, #1a73e8, #4285f4);
     color: white;

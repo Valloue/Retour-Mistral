@@ -22,41 +22,42 @@
         <button id="logoutBtn" class="logout-btn">Déconnexion</button>
     </nav>
 
-    <div class="account-container page-transition">
-        <div class="account-card">
-            <div class="account-header">
-                <h1>Profil Utilisateur</h1>
-                <p>Gérez vos informations personnelles</p>
-            </div>
-
-            <div class="account-content">
-                <div class="form-section">
-                    <h2>Informations du compte</h2>
-                    <div class="form-group">
-                        <label for="username">Pseudo</label>
-                        <input type="text" id="username" class="form-input" disabled title="Pseudo de l'utilisateur" placeholder="Pseudo">
-                    </div>
-                    <div class="form-group">
-                        <label for="email">Email</label>
-                        <input type="email" id="email" class="form-input" disabled title="Adresse email de l'utilisateur" placeholder="Email">
-                    </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="createdAt">Date d'inscription</label>
-                        <input type="text" id="createdAt" class="form-input" disabled title="Date d'inscription de l'utilisateur" placeholder="Date d'inscription">
-                    </div>
-                    <div class="btn-group">
-                        <button class="btn btn-secondary" onclick="cancelEdit()" style="display: none;">Annuler</button>
-                        <button class="btn btn-primary" onclick="toggleEditMode()">Modifier</button>
-                    </div>
+    <div class="container">
+        <div class="account-container">
+            <div class="account-card">
+                <div class="account-header">
+                    <h1>Profil Utilisateur</h1>
+                    <p>Gérez vos informations personnelles</p>
                 </div>
 
-                <div class="form-section">
-                    <h2>Statistiques</h2>
-                    <div class="stats-card">
-                        <div class="stat-item">
-                            <span class="stat-label">Total des retours</span>
-                            <span class="stat-value" id="totalRetours">0</span>
+                <div class="account-content">
+                    <div class="form-section">
+                        <h2>Informations du compte</h2>
+                        <div class="form-group">
+                            <label for="username">Pseudo</label>
+                            <input type="text" id="username" class="form-input" disabled title="Pseudo de l'utilisateur" placeholder="Pseudo">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" class="form-input" disabled title="Adresse email de l'utilisateur" placeholder="Email">
+                        </div>
+                        <div class="form-group">
+                            <label for="createdAt">Date d'inscription</label>
+                            <input type="text" id="createdAt" class="form-input" disabled title="Date d'inscription de l'utilisateur" placeholder="Date d'inscription">
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-secondary" onclick="cancelEdit()" style="display: none;">Annuler</button>
+                            <button class="btn btn-primary" onclick="toggleEditMode()">Modifier</button>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h2>Statistiques</h2>
+                        <div class="stats-card">
+                            <div class="stat-item">
+                                <span class="stat-label">Total des retours</span>
+                                <span class="stat-value" id="totalRetours">0</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -81,33 +82,42 @@
 
         // Charger les données de l'utilisateur
         window.auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                // Ajouter l'event listener de déconnexion une fois que l'auth est prête
-                document.getElementById('logoutBtn').addEventListener('click', async () => {
-                    try {
-                        await window.auth.signOut();
-                        window.location.href = 'login.html';
-                    } catch (error) {
-                        console.error('Erreur lors de la déconnexion:', error);
-                    }
-                });
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
 
+            try {
+                // Charger les données utilisateur
                 const userDoc = await window.db.collection('users').doc(user.uid).get();
                 const userData = userDoc.data();
                 
-                document.getElementById('username').value = userData.username || '';
-                document.getElementById('email').value = user.email || '';
-                document.getElementById('createdAt').value = new Date(userData.createdAt).toLocaleDateString();
-                
-                // Charger le nombre total de retours
-                const retoursSnapshot = await window.db.collection('users')
-                    .doc(user.uid)
-                    .collection('retours')
-                    .get();
-                
-                document.getElementById('totalRetours').textContent = retoursSnapshot.size;
-            } else {
+                if (userData) {
+                    document.getElementById('username').value = userData.username || '';
+                    document.getElementById('email').value = user.email || '';
+                    document.getElementById('createdAt').value = new Date(userData.createdAt).toLocaleDateString();
+                    
+                    // Charger le nombre total de retours
+                    const retoursSnapshot = await window.db.collection('users')
+                        .doc(user.uid)
+                        .collection('retours')
+                        .get();
+                    
+                    document.getElementById('totalRetours').textContent = retoursSnapshot.size;
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des données:', error);
+                showNotification('Erreur lors du chargement des données', 'error');
+            }
+        });
+
+        // Gestion de la déconnexion
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            try {
+                await window.auth.signOut();
                 window.location.href = 'login.html';
+            } catch (error) {
+                console.error('Erreur lors de la déconnexion:', error);
             }
         });
 
@@ -190,29 +200,6 @@
                 notification.classList.remove('show');
                 setTimeout(() => notification.remove(), 300);
             }, 3000);
-        }
-
-        async function saveChanges() {
-            try {
-                const newUsername = document.getElementById('newUsername').value.trim();
-                if (!newUsername) {
-                    showNotification('Le pseudo ne peut pas être vide', 'error');
-                    return;
-                }
-
-                const userId = window.auth.currentUser.uid;
-                await window.db.collection('users').doc(userId).update({
-                    username: newUsername,
-                    updatedAt: new Date().toISOString()
-                });
-
-                document.getElementById('usernamefield').textContent = newUsername;
-                closeModal();
-                showNotification('Profil mis à jour avec succès');
-            } catch (error) {
-                console.error('Erreur lors de la modification:', error);
-                showNotification('Erreur lors de la modification du profil', 'error');
-            }
         }
     </script>
 </body>
