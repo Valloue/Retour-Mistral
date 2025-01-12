@@ -187,4 +187,37 @@
 
 .delete-btn:hover {
     color: #dc3545;
+}
+
+/* Styles pour les notifications */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 24px;
+    border-radius: 4px;
+    color: white;
+    font-weight: 500;
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: all 0.3s ease;
+    z-index: 2000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.notification.success {
+    background-color: #34A853;
+}
+
+.notification.error {
+    background-color: #EA4335;
+}
+
+.notification.info {
+    background-color: #1a73e8;
 } 

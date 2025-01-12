@@ -251,10 +251,10 @@
                     
                     clearContent();
                     await loadRetoursList(); // Recharger la liste
-                    alert('Rapport supprimé avec succès');
+                    showNotification('Rapport supprimé avec succès');
                 } catch (error) {
                     console.error('Erreur lors de la suppression:', error);
-                    alert('Erreur lors de la suppression');
+                    showNotification('Une erreur est survenue', 'error');
                 }
             }
         }
@@ -275,10 +275,10 @@
                 const fullContent = `${retourTitle}\n\nActivités Matin:\n${matinContent}\n\nActivités Après-midi:\n${apresMidiContent}\n\nProblématiques:\n${problematiquesContent}`;
                 
                 await navigator.clipboard.writeText(fullContent);
-                alert('Rapport copié dans le presse-papier');
+                showNotification('Rapport copié dans le presse-papier');
             } catch (error) {
                 console.error('Erreur lors de la copie:', error);
-                alert('Erreur lors de la copie');
+                showNotification('Une erreur est survenue', 'error');
             }
         }
 
@@ -367,8 +367,26 @@
                 }, 250);
             } catch (error) {
                 console.error('Erreur lors de l\'export PDF:', error);
-                alert('Erreur lors de l\'export PDF');
+                showNotification('Une erreur est survenue', 'error');
             }
+        }
+
+        // Ajouter cette fonction au début du script, juste après la configuration Firebase
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Animation d'entrée
+            setTimeout(() => notification.classList.add('show'), 10);
+            
+            // Suppression automatique
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
         }
     </script>
 </body>

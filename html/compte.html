@@ -53,6 +53,25 @@
         </div>
     </div>
 
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Modifier le profil</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="newUsername">Nouveau pseudo</label>
+                    <input type="text" id="newUsername" class="form-input">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+                <button class="btn btn-primary" onclick="saveChanges()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Configuration Firebase
         const firebaseConfig = {
@@ -118,6 +137,67 @@
                 console.error('Erreur lors de la déconnexion:', error);
             }
         });
+
+        function openModal() {
+            const modal = document.getElementById('editModal');
+            const input = document.getElementById('newUsername');
+            input.value = document.getElementById('usernamefield').textContent;
+            modal.style.display = 'block';
+            input.focus();
+        }
+
+        function closeModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Animation d'entrée
+            setTimeout(() => notification.classList.add('show'), 10);
+            
+            // Suppression automatique
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        async function saveChanges() {
+            try {
+                const newUsername = document.getElementById('newUsername').value.trim();
+                if (!newUsername) {
+                    showNotification('Le pseudo ne peut pas être vide', 'error');
+                    return;
+                }
+
+                const userId = window.auth.currentUser.uid;
+                await window.db.collection('users').doc(userId).update({
+                    username: newUsername,
+                    updatedAt: new Date().toISOString()
+                });
+
+                document.getElementById('usernamefield').textContent = newUsername;
+                closeModal();
+                showNotification('Profil mis à jour avec succès');
+            } catch (error) {
+                console.error('Erreur lors de la modification:', error);
+                showNotification('Erreur lors de la modification du profil', 'error');
+            }
+        }
+
+        document.getElementById('editBtn').addEventListener('click', openModal);
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('editModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
     </script>
 </body>
 </html> 

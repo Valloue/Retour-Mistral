@@ -52,6 +52,24 @@
     </div>
 
     <script>
+        // Ajouter la fonction showNotification au début du script
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Animation d'entrée
+            setTimeout(() => notification.classList.add('show'), 10);
+            
+            // Suppression automatique
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
         // Définir la fonction avant toute initialisation
         function getUrlParameter(name) {
             const urlParams = new URLSearchParams(window.location.search);
@@ -160,35 +178,53 @@
                 const dateParam = getUrlParameter('date') || new Date().toISOString().split('T')[0];
                 const activityId = window.db.collection('_').doc().id;
 
-                let updatePath;
-                if (section === 'matin') {
-                    updatePath = `3_matin.activites.${activityId}`;
-                } else if (section === 'apresMidi') {
-                    updatePath = `4_apresMidi.activites.${activityId}`;
-                } else {
-                    updatePath = `5_problematiques.items.${activityId}`;
-                }
-
-                const update = {};
-                update[updatePath] = {
-                    title: title,
-                    content: '',
-                    createdAt: new Date().toISOString()
-                };
-
-                await window.db.collection('users')
+                const retourRef = window.db.collection('users')
                     .doc(userId)
                     .collection('retours')
-                    .doc(dateParam)
-                    .update(update);
+                    .doc(dateParam);
+
+                // Préparer les données avec la structure complète
+                let data = {
+                    '1_date': dateParam,
+                    '2_title': document.getElementById('retourTitle').textContent,
+                    '3_matin': { activites: {} },
+                    '4_apresMidi': { activites: {} },
+                    '5_problematiques': { items: {} }
+                };
+
+                // Ajouter l'activité dans la bonne section
+                if (section === 'matin') {
+                    data['3_matin'].activites[activityId] = {
+                        title: title,
+                        content: '',
+                        createdAt: new Date().toISOString()
+                    };
+                } else if (section === 'apresMidi') {
+                    data['4_apresMidi'].activites[activityId] = {
+                        title: title,
+                        content: '',
+                        createdAt: new Date().toISOString()
+                    };
+                } else {
+                    data['5_problematiques'].items[activityId] = {
+                        title: title,
+                        content: '',
+                        createdAt: new Date().toISOString()
+                    };
+                }
+
+                // Utiliser set avec merge pour créer ou mettre à jour le document
+                await retourRef.set(data, { merge: true });
 
                 addActivityToList(section, {
                     id: activityId,
                     title: title
                 });
+                
+                showNotification('Activité créée avec succès');
             } catch (error) {
                 console.error('Erreur lors de la création:', error);
-                alert('Erreur lors de la création');
+                showNotification('Erreur lors de la création', 'error');
             }
         }
 
@@ -396,7 +432,7 @@
                 contentDiv.focus();
             } catch (error) {
                 console.error('Erreur:', error);
-                alert('Erreur lors du chargement de l\'activité');
+                showNotification('Une erreur est survenue', 'error');
             }
         }
 
