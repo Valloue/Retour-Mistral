@@ -51,6 +51,25 @@
         </div>
     </div>
 
+    <div id="newActivityModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Nouvelle activité</h2>
+                <button class="modal-close" onclick="closeActivityModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="activityTitle">Titre</label>
+                    <input type="text" id="activityTitle" class="form-input">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeActivityModal()">Annuler</button>
+                <button class="btn btn-primary" onclick="saveActivity()">Ajouter</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Ajouter la fonction showNotification au début du script
         function showNotification(message, type = 'success') {
@@ -89,13 +108,6 @@
         firebase.initializeApp(firebaseConfig);
         window.auth = firebase.auth();
         window.db = firebase.firestore();
-
-        // Variables globales pour stocker les références aux listes d'activités
-        const activitesLists = {
-            matin: document.getElementById('activitesMatin'),
-            apresMidi: document.getElementById('activitesApresMidi'),
-            problematiques: document.getElementById('problematiques')
-        };
 
         // Vérification de l'authentification et chargement du retour
         window.auth.onAuthStateChanged(async (user) => {
@@ -160,18 +172,37 @@
             }
         });
 
-        // Gestion des activités
-        const addButtons = document.querySelectorAll('.add-btn');
-        addButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const section = button.dataset.section;
-                createNewActivity(section);
-            });
-        });
+        let currentSection = '';
 
-        async function createNewActivity(section) {
-            const title = prompt(`Nouvelle activité ${section}`);
-            if (!title) return;
+        function openActivityModal(section) {
+            currentSection = section;
+            const modal = document.getElementById('newActivityModal');
+            const input = document.getElementById('activityTitle');
+            const modalTitle = document.getElementById('modalTitle');
+            
+            if (section === 'problematiques') {
+                modalTitle.textContent = 'Nouvelle problématique';
+            } else {
+                modalTitle.textContent = `Nouvelle activité ${section === 'matin' ? 'matin' : 'après-midi'}`;
+            }
+            
+            modal.classList.add('show');
+            input.value = '';
+            input.focus();
+        }
+
+        function closeActivityModal() {
+            const modal = document.getElementById('newActivityModal');
+            modal.classList.remove('show');
+            currentSection = '';
+        }
+
+        async function saveActivity() {
+            const title = document.getElementById('activityTitle').value.trim();
+            if (!title) {
+                showNotification('Le titre ne peut pas être vide', 'error');
+                return;
+            }
 
             try {
                 const userId = window.auth.currentUser.uid;
@@ -183,29 +214,41 @@
                     .collection('retours')
                     .doc(dateParam);
 
-                // Préparer les données avec la structure complète
-                let data = {
-                    '1_date': dateParam,
-                    '2_title': document.getElementById('retourTitle').textContent,
-                    '3_matin': { activites: {} },
-                    '4_apresMidi': { activites: {} },
-                    '5_problematiques': { items: {} }
-                };
+                // D'abord, récupérer le document existant
+                const retourDoc = await retourRef.get();
+                let data = {};
 
-                // Ajouter l'activité dans la bonne section
-                if (section === 'matin') {
+                if (retourDoc.exists) {
+                    // Si le document existe, utiliser ses données
+                    data = retourDoc.data();
+                } else {
+                    // Sinon, créer la structure initiale
+                    data = {
+                        '1_date': dateParam,
+                        '2_title': document.getElementById('retourTitle').textContent,
+                        '3_matin': { activites: {} },
+                        '4_apresMidi': { activites: {} },
+                        '5_problematiques': { items: {} }
+                    };
+                }
+
+                // Ajouter la nouvelle activité aux données existantes
+                if (currentSection === 'matin') {
+                    if (!data['3_matin']) data['3_matin'] = { activites: {} };
                     data['3_matin'].activites[activityId] = {
                         title: title,
                         content: '',
                         createdAt: new Date().toISOString()
                     };
-                } else if (section === 'apresMidi') {
+                } else if (currentSection === 'apresMidi') {
+                    if (!data['4_apresMidi']) data['4_apresMidi'] = { activites: {} };
                     data['4_apresMidi'].activites[activityId] = {
                         title: title,
                         content: '',
                         createdAt: new Date().toISOString()
                     };
                 } else {
+                    if (!data['5_problematiques']) data['5_problematiques'] = { items: {} };
                     data['5_problematiques'].items[activityId] = {
                         title: title,
                         content: '',
@@ -213,14 +256,15 @@
                     };
                 }
 
-                // Utiliser set avec merge pour créer ou mettre à jour le document
-                await retourRef.set(data, { merge: true });
+                // Sauvegarder les données mises à jour
+                await retourRef.set(data);
 
-                addActivityToList(section, {
+                addActivityToList(currentSection, {
                     id: activityId,
                     title: title
                 });
-                
+
+                closeActivityModal();
                 showNotification('Activité créée avec succès');
             } catch (error) {
                 console.error('Erreur lors de la création:', error);
@@ -228,13 +272,40 @@
             }
         }
 
+        // Modifier les event listeners des boutons d'ajout
+        const addButtons = document.querySelectorAll('.add-btn');
+        addButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const section = button.dataset.section;
+                openActivityModal(section);
+            });
+        });
+
+        // Ajouter l'event listener pour fermer la modale en cliquant en dehors
+        window.onclick = function(event) {
+            const modal = document.getElementById('newActivityModal');
+            if (event.target === modal) {
+                closeActivityModal();
+            }
+        }
+
         function addActivityToList(section, activity) {
+            const listId = section === 'matin' ? 'activitesMatin' : 
+                           section === 'apresMidi' ? 'activitesApresMidi' : 
+                           'problematiques';
+            
+            const listElement = document.getElementById(listId);
+            if (!listElement) {
+                console.error(`Liste non trouvée pour la section: ${section}`);
+                return;
+            }
+
             const div = document.createElement('div');
             div.className = 'activity-item';
             div.dataset.id = activity.id;
             div.textContent = activity.title;
             div.onclick = () => selectActivity(activity.id);
-            activitesLists[section].appendChild(div);
+            listElement.appendChild(div);
         }
 
         async function selectActivity(activityId) {
