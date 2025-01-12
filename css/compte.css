@@ -1,173 +1,113 @@
 .container {
-    padding: 80px 20px 20px;
+    display: flex;
+    height: calc(100vh - 60px);
+    margin-top: 60px;
+    padding: 20px;
+    background: #f8f9fa;
 }
 
-.dashboard {
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-.profile-section {
+.profile-card {
     background: white;
     border-radius: 8px;
-    padding: 24px;
-    margin-bottom: 24px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 24px;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    overflow-y: auto;
 }
 
 .profile-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #dee2e6;
 }
 
-.profile-header h2 {
+.profile-header h1 {
+    font-size: 1.5rem;
+    color: #202124;
     margin: 0;
-    color: #2c3e50;
 }
 
 .edit-btn {
     padding: 8px 16px;
-    background: #007bff;
+    background: #1a73e8;
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
 }
 
 .edit-btn:hover {
-    background: #0056b3;
+    background: #1557b0;
 }
 
-.profile-info {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
+.profile-content {
+    margin-bottom: 32px;
 }
 
-.info-group {
-    padding: 10px;
+.profile-field {
+    margin-bottom: 16px;
 }
 
-.info-group label {
+.profile-field label {
     display: block;
-    color: #666;
-    margin-bottom: 5px;
     font-size: 0.9rem;
+    color: #5f6368;
+    margin-bottom: 4px;
 }
 
-.info-group p {
-    margin: 0;
+.profile-field span {
+    display: block;
+    font-size: 1rem;
+    color: #202124;
+    padding: 8px 0;
+}
+
+.stats-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.stats-section h2 {
     font-size: 1.1rem;
-    color: #2c3e50;
+    color: #202124;
+    margin-bottom: 16px;
+}
+
+.stats-number {
+    font-size: 2rem;
+    color: #1a73e8;
+    font-weight: bold;
+    text-align: center;
 }
 
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 24px;
-    margin-top: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
 }
 
-.stat-card {
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+.stat-item {
+    text-align: center;
 }
 
-.stat-card h3 {
-    margin: 0 0 16px;
-    color: #2c3e50;
-    font-size: 1.1rem;
-}
-
-.stat-value {
-    font-size: 2rem;
-    font-weight: bold;
-    color: #007bff;
-    margin-bottom: 16px;
-}
-
-.issues-list {
-    max-height: 300px;
-    overflow-y: auto;
-}
-
-.issue-item {
-    padding: 10px;
-    border-bottom: 1px solid #eee;
-}
-
-.issue-item:last-child {
-    border-bottom: none;
-}
-
-.modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 1000;
-}
-
-.modal-content {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: white;
-    padding: 24px;
-    border-radius: 8px;
-    width: 90%;
-    max-width: 500px;
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.modal-close {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-}
-
-.form-group {
-    margin-bottom: 16px;
-}
-
-.form-group label {
+.stat-item label {
     display: block;
-    margin-bottom: 8px;
-    color: #2c3e50;
+    font-size: 0.9rem;
+    color: #5f6368;
+    margin-bottom: 4px;
 }
 
-.form-group input {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-
-.save-btn {
-    width: 100%;
-    padding: 10px;
-    background: #28a745;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.save-btn:hover {
-    background: #218838;
+.stat-item span {
+    font-size: 1.5rem;
+    color: #1a73e8;
+    font-weight: bold;
 } 

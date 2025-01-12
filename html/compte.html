@@ -6,7 +6,6 @@
     <title>RetourMistral - Mon Compte</title>
     <link rel="stylesheet" href="../css/common.css">
     <link rel="stylesheet" href="../css/compte.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.css">
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -24,91 +23,38 @@
     </nav>
 
     <div class="container">
-        <div class="dashboard">
-            <div class="profile-section">
-                <div class="profile-header">
-                    <h2>Profil Utilisateur</h2>
-                    <button id="editProfileBtn" class="edit-btn">Modifier</button>
+        <div class="profile-card">
+            <div class="profile-header">
+                <h1>Profil Utilisateur</h1>
+                <button id="editBtn" class="edit-btn">Modifier</button>
+            </div>
+
+            <div class="profile-content">
+                <div class="profile-field">
+                    <label>Pseudo</label>
+                    <span id="usernamefield"></span>
                 </div>
-                <div class="profile-info">
-                    <div class="info-group">
-                        <label>Pseudo</label>
-                        <p id="username"></p>
-                    </div>
-                    <div class="info-group">
-                        <label>Email</label>
-                        <p id="email"></p>
-                    </div>
-                    <div class="info-group">
-                        <label>Date d'inscription</label>
-                        <p id="createdAt"></p>
-                    </div>
+
+                <div class="profile-field">
+                    <label>Email</label>
+                    <span id="emailfield"></span>
+                </div>
+
+                <div class="profile-field">
+                    <label>Date d'inscription</label>
+                    <span id="createdAtField"></span>
                 </div>
             </div>
 
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3>Total des Retours</h3>
-                    <div class="stat-value" id="totalRetours">0</div>
-                    <canvas id="retoursTrendChart"></canvas>
-                </div>
-                <div class="stat-card">
-                    <h3>Activités par Type</h3>
-                    <canvas id="activitesTypeChart"></canvas>
-                </div>
-                <div class="stat-card">
-                    <h3>Problématiques Récentes</h3>
-                    <div id="recentIssues" class="issues-list"></div>
-                </div>
-                <div class="stat-card">
-                    <h3>Activité Hebdomadaire</h3>
-                    <canvas id="weeklyActivityChart"></canvas>
-                </div>
+            <div class="stats-section">
+                <h2>Total des Retours</h2>
+                <div class="stats-number" id="totalRetours">0</div>
             </div>
         </div>
     </div>
 
-    <!-- Modal de modification du profil -->
-    <div id="editProfileModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Modifier le profil</h3>
-                <button class="modal-close">&times;</button>
-            </div>
-            <form id="editProfileForm">
-                <div class="form-group">
-                    <label for="editUsername">Pseudo</label>
-                    <input type="text" 
-                           id="editUsername" 
-                           name="username"
-                           placeholder="Votre pseudo" 
-                           title="Entrez votre pseudo"
-                           required>
-                </div>
-                <div class="form-group">
-                    <label for="editEmail">Email</label>
-                    <input type="email" 
-                           id="editEmail" 
-                           name="email"
-                           placeholder="Votre email" 
-                           title="Entrez votre adresse email"
-                           required>
-                </div>
-                <div class="form-group">
-                    <label for="editPassword">Nouveau mot de passe (optionnel)</label>
-                    <input type="password" 
-                           id="editPassword"
-                           name="password" 
-                           placeholder="Laissez vide pour ne pas modifier"
-                           title="Minimum 10 caractères, 1 majuscule, 1 minuscule, 1 chiffre et 1 caractère spécial">
-                </div>
-                <button type="submit" class="save-btn">Enregistrer</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Initialisation Firebase -->
     <script>
+        // Configuration Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyCEvK9CVWCmNGmOvHtwNnEJ65A_33JgSq0",
             authDomain: "retour-mistral.firebaseapp.com",
@@ -121,13 +67,57 @@
         firebase.initializeApp(firebaseConfig);
         window.auth = firebase.auth();
         window.db = firebase.firestore();
-    </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        // Vérification de l'authentification et chargement des données
+        window.auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+            await loadUserProfile(user);
+            await loadUserStats(user);
+        });
 
-    <!-- Logique du compte -->
-    <script>
-        // ... code de compte.js converti en version compat ...
+        async function loadUserProfile(user) {
+            try {
+                const userDoc = await window.db.collection('users').doc(user.uid).get();
+                const userData = userDoc.data();
+
+                document.getElementById('usernamefield').textContent = userData.username;
+                document.getElementById('emailfield').textContent = user.email;
+                
+                // Formater la date d'inscription
+                const createdAt = new Date(userData.createdAt);
+                const formattedDate = createdAt.toLocaleDateString('fr-FR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+                document.getElementById('createdAtField').textContent = formattedDate;
+            } catch (error) {
+                console.error('Erreur lors du chargement du profil:', error);
+            }
+        }
+
+        async function loadUserStats(user) {
+            try {
+                const retoursRef = window.db.collection('users').doc(user.uid).collection('retours');
+                const snapshot = await retoursRef.get();
+                document.getElementById('totalRetours').textContent = snapshot.size;
+            } catch (error) {
+                console.error('Erreur lors du chargement des statistiques:', error);
+            }
+        }
+
+        // Gestion de la déconnexion
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            try {
+                await window.auth.signOut();
+                window.location.href = 'login.html';
+            } catch (error) {
+                console.error('Erreur lors de la déconnexion:', error);
+            }
+        });
     </script>
 </body>
 </html> 
