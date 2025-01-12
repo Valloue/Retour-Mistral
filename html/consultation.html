@@ -22,7 +22,7 @@
         <button id="logoutBtn" class="logout-btn">Déconnexion</button>
     </nav>
 
-    <div class="container">
+    <div class="container page-transition">
         <div class="sidebar">
             <div class="date-selector">
                 <label for="dateSelector">Sélectionner une date</label>
@@ -136,6 +136,8 @@
 
         async function loadRetourContent(date) {
             try {
+                const mainContent = document.querySelector('.main-content');
+                mainContent.classList.add('loading');
                 const userId = window.auth.currentUser.uid;
                 const retourRef = window.db.collection('users')
                     .doc(userId)
@@ -150,6 +152,7 @@
 
                 const data = doc.data();
                 displayRetourContent(data);
+                setTimeout(() => mainContent.classList.remove('loading'), 500);
             } catch (error) {
                 console.error('Erreur lors du chargement:', error);
             }
@@ -501,6 +504,8 @@
 
         function exportToPDF() {
             try {
+                const pdfBtn = document.querySelector('.pdf-btn');
+                pdfBtn.classList.add('loading');
                 const printContent = document.createElement('div');
                 const retourTitle = document.getElementById('retourTitle').textContent;
                 
@@ -570,6 +575,8 @@
             } catch (error) {
                 console.error('Erreur lors de l\'export PDF:', error);
                 showNotification('Une erreur est survenue', 'error');
+            } finally {
+                setTimeout(() => pdfBtn.classList.remove('loading'), 500);
             }
         }
 

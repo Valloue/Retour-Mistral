@@ -22,52 +22,44 @@
         <button id="logoutBtn" class="logout-btn">Déconnexion</button>
     </nav>
 
-    <div class="container">
-        <div class="profile-card">
-            <div class="profile-header">
+    <div class="account-container page-transition">
+        <div class="account-card">
+            <div class="account-header">
                 <h1>Profil Utilisateur</h1>
-                <button id="editBtn" class="edit-btn">Modifier</button>
+                <p>Gérez vos informations personnelles</p>
             </div>
 
-            <div class="profile-content">
-                <div class="profile-field">
-                    <label>Pseudo</label>
-                    <span id="usernamefield"></span>
+            <div class="account-content">
+                <div class="form-section">
+                    <h2>Informations du compte</h2>
+                    <div class="form-group">
+                        <label for="username">Pseudo</label>
+                        <input type="text" id="username" class="form-input" disabled title="Pseudo de l'utilisateur" placeholder="Pseudo">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" class="form-input" disabled title="Adresse email de l'utilisateur" placeholder="Email">
+                    </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="createdAt">Date d'inscription</label>
+                        <input type="text" id="createdAt" class="form-input" disabled title="Date d'inscription de l'utilisateur" placeholder="Date d'inscription">
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" onclick="cancelEdit()" style="display: none;">Annuler</button>
+                        <button class="btn btn-primary" onclick="toggleEditMode()">Modifier</button>
+                    </div>
                 </div>
 
-                <div class="profile-field">
-                    <label>Email</label>
-                    <span id="emailfield"></span>
+                <div class="form-section">
+                    <h2>Statistiques</h2>
+                    <div class="stats-card">
+                        <div class="stat-item">
+                            <span class="stat-label">Total des retours</span>
+                            <span class="stat-value" id="totalRetours">0</span>
+                        </div>
+                    </div>
                 </div>
-
-                <div class="profile-field">
-                    <label>Date d'inscription</label>
-                    <span id="createdAtField"></span>
-                </div>
-            </div>
-
-            <div class="stats-section">
-                <h2>Total des Retours</h2>
-                <div class="stats-number" id="totalRetours">0</div>
-            </div>
-        </div>
-    </div>
-
-    <div id="editModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Modifier le profil</h2>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="newUsername">Nouveau pseudo</label>
-                    <input type="text" id="newUsername" class="form-input">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
-                <button class="btn btn-primary" onclick="saveChanges()">Enregistrer</button>
             </div>
         </div>
     </div>
@@ -87,67 +79,100 @@
         window.auth = firebase.auth();
         window.db = firebase.firestore();
 
-        // Vérification de l'authentification et chargement des données
+        // Charger les données de l'utilisateur
         window.auth.onAuthStateChanged(async (user) => {
-            if (!user) {
-                window.location.href = 'login.html';
-                return;
-            }
-            await loadUserProfile(user);
-            await loadUserStats(user);
-        });
+            if (user) {
+                // Ajouter l'event listener de déconnexion une fois que l'auth est prête
+                document.getElementById('logoutBtn').addEventListener('click', async () => {
+                    try {
+                        await window.auth.signOut();
+                        window.location.href = 'login.html';
+                    } catch (error) {
+                        console.error('Erreur lors de la déconnexion:', error);
+                    }
+                });
 
-        async function loadUserProfile(user) {
-            try {
                 const userDoc = await window.db.collection('users').doc(user.uid).get();
                 const userData = userDoc.data();
-
-                document.getElementById('usernamefield').textContent = userData.username;
-                document.getElementById('emailfield').textContent = user.email;
                 
-                // Formater la date d'inscription
-                const createdAt = new Date(userData.createdAt);
-                const formattedDate = createdAt.toLocaleDateString('fr-FR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric'
-                });
-                document.getElementById('createdAtField').textContent = formattedDate;
-            } catch (error) {
-                console.error('Erreur lors du chargement du profil:', error);
-            }
-        }
-
-        async function loadUserStats(user) {
-            try {
-                const retoursRef = window.db.collection('users').doc(user.uid).collection('retours');
-                const snapshot = await retoursRef.get();
-                document.getElementById('totalRetours').textContent = snapshot.size;
-            } catch (error) {
-                console.error('Erreur lors du chargement des statistiques:', error);
-            }
-        }
-
-        // Gestion de la déconnexion
-        document.getElementById('logoutBtn').addEventListener('click', async () => {
-            try {
-                await window.auth.signOut();
+                document.getElementById('username').value = userData.username || '';
+                document.getElementById('email').value = user.email || '';
+                document.getElementById('createdAt').value = new Date(userData.createdAt).toLocaleDateString();
+                
+                // Charger le nombre total de retours
+                const retoursSnapshot = await window.db.collection('users')
+                    .doc(user.uid)
+                    .collection('retours')
+                    .get();
+                
+                document.getElementById('totalRetours').textContent = retoursSnapshot.size;
+            } else {
                 window.location.href = 'login.html';
-            } catch (error) {
-                console.error('Erreur lors de la déconnexion:', error);
             }
         });
 
-        function openModal() {
-            const modal = document.getElementById('editModal');
-            const input = document.getElementById('newUsername');
-            input.value = document.getElementById('usernamefield').textContent;
-            modal.style.display = 'block';
-            input.focus();
+        async function updateProfile() {
+            const submitBtn = document.querySelector('.btn-primary');
+            submitBtn.classList.add('loading');
+            try {
+                const newUsername = document.getElementById('username').value.trim();
+                if (!newUsername) {
+                    showNotification('Le pseudo ne peut pas être vide', 'error');
+                    return;
+                }
+
+                const userId = window.auth.currentUser.uid;
+                await window.db.collection('users').doc(userId).update({
+                    username: newUsername,
+                    updatedAt: new Date().toISOString()
+                });
+
+                // Désactiver le mode édition
+                document.getElementById('username').disabled = true;
+                submitBtn.textContent = 'Modifier';
+                document.querySelector('.btn-secondary').style.display = 'none';
+
+                showNotification('Profil mis à jour avec succès');
+            } catch (error) {
+                console.error('Erreur:', error);
+                showNotification('Erreur lors de la mise à jour', 'error');
+            } finally {
+                setTimeout(() => submitBtn.classList.remove('loading'), 500);
+            }
         }
 
-        function closeModal() {
-            document.getElementById('editModal').style.display = 'none';
+        function toggleEditMode() {
+            const usernameInput = document.getElementById('username');
+            const editBtn = document.querySelector('.btn-primary');
+            
+            if (usernameInput.disabled) {
+                // Activer le mode édition
+                usernameInput.disabled = false;
+                usernameInput.focus();
+                editBtn.textContent = 'Enregistrer';
+                document.querySelector('.btn-secondary').style.display = 'inline-block';
+            } else {
+                // Sauvegarder les modifications
+                updateProfile();
+            }
+        }
+
+        function cancelEdit() {
+            const usernameInput = document.getElementById('username');
+            const editBtn = document.querySelector('.btn-primary');
+            
+            usernameInput.disabled = true;
+            editBtn.textContent = 'Modifier';
+            document.querySelector('.btn-secondary').style.display = 'none';
+            
+            // Recharger les données originales
+            window.auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    const userDoc = await window.db.collection('users').doc(user.uid).get();
+                    const userData = userDoc.data();
+                    usernameInput.value = userData.username || '';
+                }
+            });
         }
 
         function showNotification(message, type = 'success') {
@@ -187,15 +212,6 @@
             } catch (error) {
                 console.error('Erreur lors de la modification:', error);
                 showNotification('Erreur lors de la modification du profil', 'error');
-            }
-        }
-
-        document.getElementById('editBtn').addEventListener('click', openModal);
-
-        window.onclick = function(event) {
-            const modal = document.getElementById('editModal');
-            if (event.target === modal) {
-                closeModal();
             }
         }
     </script>

@@ -1,118 +1,124 @@
-.container {
-    display: flex;
-    height: calc(100vh - 60px);
-    margin-top: 60px;
-    padding: 20px;
-    background: #f8f9fa;
-}
-
-.profile-card {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    padding: 24px;
-    width: 100%;
+.account-container {
     max-width: 800px;
-    margin: 0 auto;
-    overflow-y: auto;
+    margin: 80px auto 0;
+    padding: 30px;
+    animation: fadeIn 0.5s ease;
 }
 
-.profile-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid #dee2e6;
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-.profile-header h1 {
-    font-size: 1.5rem;
-    color: #202124;
-    margin: 0;
+.account-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    overflow: hidden;
 }
 
-.edit-btn {
-    padding: 8px 16px;
-    background: #1a73e8;
+.account-header {
+    background: linear-gradient(45deg, #1a73e8, #4285f4);
     color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: background-color 0.2s ease;
+    padding: 30px;
+    position: relative;
 }
 
-.edit-btn:hover {
-    background: #1557b0;
+.account-header h1 {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 8px;
 }
 
-.profile-content {
+.account-header p {
+    opacity: 0.9;
+    font-size: 14px;
+}
+
+.account-content {
+    padding: 30px;
+}
+
+.form-section {
     margin-bottom: 32px;
 }
 
-.profile-field {
-    margin-bottom: 16px;
+.form-section:last-child {
+    margin-bottom: 0;
 }
 
-.profile-field label {
-    display: block;
-    font-size: 0.9rem;
-    color: #5f6368;
-    margin-bottom: 4px;
-}
-
-.profile-field span {
-    display: block;
-    font-size: 1rem;
+.form-section h2 {
+    font-size: 18px;
     color: #202124;
-    padding: 8px 0;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f1f3f4;
 }
 
-.stats-section {
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 20px;
+.form-group {
     margin-bottom: 24px;
 }
 
-.stats-section h2 {
-    font-size: 1.1rem;
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #5f6368;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.form-input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 15px;
     color: #202124;
-    margin-bottom: 16px;
+    transition: all 0.2s ease;
 }
 
-.stats-number {
-    font-size: 2rem;
-    color: #1a73e8;
-    font-weight: bold;
-    text-align: center;
+.form-input:disabled {
+    background: #f8f9fa;
+    cursor: not-allowed;
 }
 
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 16px;
+.btn-group {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 32px;
+}
+
+.stats-card {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 20px;
 }
 
 .stat-item {
-    text-align: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.stat-item label {
-    display: block;
-    font-size: 0.9rem;
+.stat-label {
     color: #5f6368;
-    margin-bottom: 4px;
+    font-size: 14px;
 }
 
-.stat-item span {
-    font-size: 1.5rem;
+.stat-value {
+    font-size: 24px;
+    font-weight: 600;
     color: #1a73e8;
-    font-weight: bold;
 }
 
-/* Styles pour la modale */
+/* Modal styles */
 .modal {
     display: none;
     position: fixed;
@@ -120,140 +126,50 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.5);
     z-index: 1000;
+    align-items: center;
+    justify-content: center;
 }
 
 .modal-content {
-    position: relative;
-    background-color: #fff;
-    margin: 10% auto;
-    padding: 24px;
+    background: white;
+    border-radius: 12px;
     width: 90%;
-    max-width: 500px;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
 }
 
 .modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid #dee2e6;
 }
 
 .modal-header h2 {
-    margin: 0;
-    font-size: 1.25rem;
+    font-size: 18px;
     color: #202124;
+    margin: 0;
 }
 
 .modal-close {
     background: none;
     border: none;
-    font-size: 1.5rem;
+    font-size: 24px;
     color: #5f6368;
     cursor: pointer;
-    padding: 0;
 }
 
-.modal-close:hover {
-    color: #202124;
-}
-
-.form-group {
-    margin-bottom: 20px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 8px;
-    color: #5f6368;
-    font-size: 0.9rem;
-}
-
-.form-input {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    font-size: 1rem;
-    color: #202124;
-}
-
-.form-input:focus {
-    outline: none;
-    border-color: #1a73e8;
-    box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+.modal-body {
+    padding: 20px;
 }
 
 .modal-footer {
+    padding: 20px;
+    border-top: 1px solid #e0e0e0;
     display: flex;
     justify-content: flex-end;
     gap: 12px;
-    margin-top: 24px;
-    padding-top: 16px;
-    border-top: 1px solid #dee2e6;
-}
-
-.btn {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-primary {
-    background: #1a73e8;
-    color: white;
-}
-
-.btn-primary:hover {
-    background: #1557b0;
-}
-
-.btn-secondary {
-    background: #f1f3f4;
-    color: #5f6368;
-}
-
-.btn-secondary:hover {
-    background: #e8eaed;
-}
-
-/* Styles pour les notifications */
-.notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 12px 24px;
-    border-radius: 4px;
-    color: white;
-    font-weight: 500;
-    opacity: 0;
-    transform: translateY(-20px);
-    transition: all 0.3s ease;
-    z-index: 2000;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.notification.show {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.notification.success {
-    background-color: #34A853;
-}
-
-.notification.error {
-    background-color: #EA4335;
-}
-
-.notification.info {
-    background-color: #1a73e8;
 } 
