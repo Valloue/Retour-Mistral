@@ -346,4 +346,34 @@
 
 .btn-secondary:hover {
     background: #e8eaed;
+}
+
+.correct-btn {
+    background-color: #34A853 !important;
+    color: white !important;
+}
+
+.correct-btn:hover {
+    background-color: #2d9147 !important;
+    color: white !important;
+}
+
+.context-menu {
+    position: fixed;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    padding: 8px 0;
+    z-index: 1000;
+}
+
+.menu-item {
+    padding: 8px 16px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.menu-item:hover {
+    background: #f8f9fa;
 } 
