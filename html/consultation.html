@@ -157,8 +157,13 @@
             dateSelector.value = today;
             dateSelector.max = today;
 
-            dateSelector.addEventListener('change', () => {
-                loadRetourContent(dateSelector.value);
+            dateSelector.addEventListener('change', (e) => {
+                const selectedDate = e.target.value;
+                if (selectedDate) {
+                    loadRetourContent(selectedDate);
+                } else {
+                    clearContent();
+                }
             });
 
             // Charger la liste des retours existants
@@ -168,6 +173,13 @@
 
         async function loadRetourContent(date) {
             try {
+                // Vérifier si la date est valide
+                if (!date) {
+                    console.log('Date invalide');
+                    clearContent();
+                    return;
+                }
+
                 const mainContent = document.querySelector('.main-content');
                 mainContent.classList.add('loading');
                 const userId = window.auth.currentUser.uid;
@@ -178,6 +190,7 @@
 
                 const doc = await retourRef.get();
                 if (!doc.exists) {
+                    console.log('Aucun retour trouvé pour cette date');
                     clearContent();
                     return;
                 }
@@ -186,7 +199,9 @@
                 displayRetourContent(data);
                 setTimeout(() => mainContent.classList.remove('loading'), 500);
             } catch (error) {
-                console.error('Erreur lors du chargement:', error);
+                console.error('Erreur lors du chargement du retour:', error);
+                clearContent();
+                showNotification('Erreur lors du chargement du retour', 'error');
             }
         }
 
