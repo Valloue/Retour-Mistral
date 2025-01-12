@@ -561,6 +561,38 @@
 
                 contentDiv.focus();
 
+                // Ajouter l'auto-sauvegarde
+                contentDiv.addEventListener('input', () => {
+                    if (saveTimeout) clearTimeout(saveTimeout);
+                    
+                    saveTimeout = setTimeout(async () => {
+                        try {
+                            const update = {};
+                            update[`${updatePath}.content`] = contentDiv.innerHTML;
+                            update[`${updatePath}.updatedAt`] = new Date().toISOString();
+
+                            await window.db.collection('users')
+                                .doc(userId)
+                                .collection('retours')
+                                .doc(dateParam)
+                                .update(update);
+                            
+                        } catch (error) {
+                            console.error('Erreur lors de la sauvegarde:', error);
+                            showNotification('Erreur lors de la sauvegarde', 'error');
+                        }
+                    }, 1000); // Sauvegarde 1 seconde après la dernière modification
+                });
+
+                // Ajouter l'avertissement quand on quitte la page
+                window.addEventListener('beforeunload', (e) => {
+                    const contentDiv = document.getElementById('activityContent');
+                    if (contentDiv && contentDiv.dataset.updatePath) {
+                        e.preventDefault();
+                        e.returnValue = '';
+                    }
+                });
+
             } catch (error) {
                 console.error('Erreur lors de la sélection:', error);
                 showNotification('Erreur lors de la sélection', 'error');
