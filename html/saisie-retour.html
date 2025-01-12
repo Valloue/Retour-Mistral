@@ -62,6 +62,8 @@
     </div>
 
     <script>
+        let saveTimeout = null;  // Déclarer la variable globalement
+
         // Ajouter la fonction showNotification au début du script
         function showNotification(message, type = 'success') {
             const notification = document.createElement('div');
@@ -109,6 +111,12 @@
 
             try {
                 const dateParam = getUrlParameter('date');
+                // Forcer la date à aujourd'hui en UTC+1 (France)
+                const now = new Date();
+                const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+                    .toISOString()
+                    .split('T')[0];
+                
                 if (dateParam) {
                     // Si une date est spécifiée, charger ce retour
                     const retourDoc = await window.db.collection('users')
@@ -119,39 +127,84 @@
 
                     if (retourDoc.exists) {
                         const data = retourDoc.data();
-                        document.getElementById('retourTitle').textContent = data['2_title'];
-
-                        // Charger les activités du matin
-                        Object.entries(data['3_matin'].activites || {}).forEach(([id, activity]) => {
-                            addActivityToList('matin', { id, title: activity.title });
-                        });
-
-                        // Charger les activités de l'après-midi
-                        Object.entries(data['4_apresMidi'].activites || {}).forEach(([id, activity]) => {
-                            addActivityToList('apresMidi', { id, title: activity.title });
-                        });
-
-                        // Charger les problématiques
-                        Object.entries(data['5_problematiques'].items || {}).forEach(([id, problem]) => {
-                            addActivityToList('problematiques', { id, title: problem.title });
-                        });
+                        loadExistingRetour(data);
                     }
                 } else {
-                    // Créer un nouveau retour pour aujourd'hui
-                    const userDoc = await window.db.collection('users').doc(user.uid).get();
-                    const username = userDoc.data().username;
+                    // Vérifier si un retour existe déjà pour aujourd'hui
+                    const todayRetourDoc = await window.db.collection('users')
+                        .doc(user.uid)
+                        .collection('retours')
+                        .doc(today)
+                        .get();
                     
-                    const today = new Date().toISOString().split('T')[0];
-                    const formattedDate = formatDate(new Date());
-                    const retourTitle = `Retour ${username} ${formattedDate}`;
-                    
-                    document.getElementById('retourTitle').textContent = retourTitle;
+                    if (todayRetourDoc.exists) {
+                        // Si un retour existe déjà, le charger
+                        loadExistingRetour(todayRetourDoc.data());
+                    } else {
+                        // Créer un nouveau retour pour aujourd'hui
+                        await createNewRetour(user.uid, today);
+                    }
                 }
             } catch (error) {
                 console.error('Erreur lors de l\'initialisation:', error);
                 alert('Erreur lors de l\'initialisation de la page');
             }
         });
+
+        // Fonction pour charger un retour existant
+        function loadExistingRetour(data) {
+            document.getElementById('retourTitle').textContent = data['2_title'] || '';
+
+            // Charger les activités du matin
+            Object.entries(data['3_matin']?.activites || {}).forEach(([id, activity]) => {
+                addActivityToList('matin', { id, title: activity.title });
+            });
+
+            // Charger les activités de l'après-midi
+            Object.entries(data['4_apresMidi']?.activites || {}).forEach(([id, activity]) => {
+                addActivityToList('apresMidi', { id, title: activity.title });
+            });
+
+            // Charger les problématiques
+            Object.entries(data['5_problematiques']?.items || {}).forEach(([id, problem]) => {
+                addActivityToList('problematiques', { id, title: problem.title });
+            });
+        }
+
+        // Fonction pour créer un nouveau retour
+        async function createNewRetour(userId, date) {
+            try {
+                const userDoc = await window.db.collection('users').doc(userId).get();
+                const username = userDoc.data().username;
+                // Créer une date à partir du paramètre date
+                const currentDate = new Date();
+                const formattedDate = currentDate.toLocaleDateString('fr-FR', {
+                    day: '2-digit',
+                    month: '2-digit'
+                });
+                const retourTitle = `Retour ${username} ${formattedDate}`;
+
+                const newRetour = {
+                    '1_date': date,
+                    '2_title': retourTitle,
+                    '3_matin': { activites: {} },
+                    '4_apresMidi': { activites: {} },
+                    '5_problematiques': { items: {} }
+                };
+
+                await window.db.collection('users')
+                    .doc(userId)
+                    .collection('retours')
+                    .doc(date)
+                    .set(newRetour);
+
+                document.getElementById('retourTitle').textContent = retourTitle;
+                showNotification('Nouveau retour créé pour aujourd\'hui', 'success');
+            } catch (error) {
+                console.error('Erreur lors de la création du nouveau retour:', error);
+                showNotification('Erreur lors de la création du retour', 'error');
+            }
+        }
 
         // Gestion de la déconnexion
         document.getElementById('logoutBtn').addEventListener('click', async () => {
@@ -265,17 +318,23 @@
         async function saveActivity(section) {
             try {
                 const userId = window.auth.currentUser.uid;
-                const dateParam = getUrlParameter('date') || new Date().toISOString().split('T')[0];
+                const dateParam = getUrlParameter('date');
+                // Utiliser la date d'aujourd'hui si aucune date n'est spécifiée
+                const now = new Date();
+                const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+                    .toISOString()
+                    .split('T')[0];
+                const targetDate = dateParam || today;
                 const activityId = window.db.collection('_').doc().id;
 
                 const retourRef = window.db.collection('users')
                     .doc(userId)
                     .collection('retours')
-                    .doc(dateParam);
+                    .doc(targetDate);
 
                 const retourDoc = await retourRef.get();
                 let data = retourDoc.exists ? retourDoc.data() : {
-                    '1_date': dateParam,
+                    '1_date': targetDate,
                     '2_title': document.getElementById('retourTitle').textContent,
                     '3_matin': { activites: {} },
                     '4_apresMidi': { activites: {} },
@@ -380,6 +439,13 @@
 
         async function saveContentWithCorrection(contentDiv, updatePath, userId, dateParam) {
             try {
+                // Utiliser la date d'aujourd'hui si aucune date n'est spécifiée
+                const now = new Date();
+                const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+                    .toISOString()
+                    .split('T')[0];
+                const targetDate = dateParam || today;
+
                 const update = {};
                 update[`${updatePath}.content`] = contentDiv.innerHTML;
                 update[`${updatePath}.updatedAt`] = new Date().toISOString();
@@ -387,7 +453,7 @@
                 await window.db.collection('users')
                     .doc(userId)
                     .collection('retours')
-                    .doc(dateParam)
+                    .doc(targetDate)
                     .update(update);
                     
             } catch (error) {
@@ -400,12 +466,18 @@
         async function selectActivity(activityId) {
             try {
                 const userId = window.auth.currentUser.uid;
-                const dateParam = getUrlParameter('date') || new Date().toISOString().split('T')[0];
+                const dateParam = getUrlParameter('date');
+                // Utiliser la date d'aujourd'hui si aucune date n'est spécifiée
+                const now = new Date();
+                const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+                    .toISOString()
+                    .split('T')[0];
+                const targetDate = dateParam || today;
                 
                 const retourDoc = await window.db.collection('users')
                     .doc(userId)
                     .collection('retours')
-                    .doc(dateParam)
+                    .doc(targetDate)
                     .get();
 
                 if (!retourDoc.exists) return;
@@ -416,25 +488,37 @@
                 });
 
                 const activityElement = document.querySelector(`[data-id="${activityId}"]`);
+                if (!activityElement) {
+                    console.error('Élément activité non trouvé:', activityId);
+                    return;
+                }
                 activityElement.classList.add('active');
 
                 let activityData;
                 let updatePath;
 
-                if (data['3_matin'].activites?.[activityId]) {
+                if (data['3_matin']?.activites?.[activityId]) {
                     activityData = data['3_matin'].activites[activityId];
                     updatePath = `3_matin.activites.${activityId}`;
-                } else if (data['4_apresMidi'].activites?.[activityId]) {
+                } else if (data['4_apresMidi']?.activites?.[activityId]) {
                     activityData = data['4_apresMidi'].activites[activityId];
                     updatePath = `4_apresMidi.activites.${activityId}`;
-                } else if (data['5_problematiques'].items?.[activityId]) {
+                } else if (data['5_problematiques']?.items?.[activityId]) {
                     activityData = data['5_problematiques'].items[activityId];
                     updatePath = `5_problematiques.items.${activityId}`;
                 }
 
-                if (!activityData) return;
+                if (!activityData) {
+                    console.error('Données activité non trouvées:', activityId);
+                    return;
+                }
 
                 const editor = document.getElementById('editor');
+                if (!editor) {
+                    console.error('Éditeur non trouvé');
+                    return;
+                }
+
                 editor.classList.add('loading');
                 editor.innerHTML = `
                     <div class="editor-content">
@@ -455,129 +539,33 @@
                     </div>
                 `;
 
+                // Réinitialiser les gestionnaires d'événements
                 window.formatDoc = function(cmd) {
                     document.execCommand(cmd, false, null);
                     document.getElementById('activityContent').focus();
                 };
 
                 const contentDiv = document.getElementById('activityContent');
-                let saveTimeout;
+                if (!contentDiv) {
+                    console.error('Zone de contenu non trouvée');
+                    return;
+                }
 
-                // Gestion des puces
-                contentDiv.addEventListener('keydown', (e) => {
-                    if (e.key === ' ') {
-                        const selection = window.getSelection();
-                        const range = selection.getRangeAt(0);
-                        const node = range.startContainer;
-                        
-                        if (node.nodeType === 3) { // Node.TEXT_NODE
-                            const text = node.textContent;
-                            const position = range.startOffset;
-                            
-                            // Vérifier si on est au début d'une ligne et qu'on vient de taper un tiret
-                            if (text === '-' || (text.endsWith('-') && text.slice(0, -1).trim() === '')) {
-                                e.preventDefault();
-                                
-                                // Créer un nouveau paragraphe pour la puce
-                                const listItem = document.createElement('li');
-                                const ul = document.createElement('ul');
-                                ul.appendChild(listItem);
-                                
-                                // Remplacer le texte actuel par la liste
-                                node.textContent = '';
-                                node.parentNode.insertBefore(ul, node);
-                                
-                                // Placer le curseur dans le nouvel élément de liste
-                                const newRange = document.createRange();
-                                newRange.setStart(listItem, 0);
-                                newRange.collapse(true);
-                                selection.removeAllRanges();
-                                selection.addRange(newRange);
-                                
-                                // Donner le focus
-                                contentDiv.focus();
-                            }
-                        }
-                    }
-                });
-
-                // Gestion de l'indentation
-                contentDiv.addEventListener('keydown', (e) => {
-                    if (e.key === 'Tab' || e.key === 'Enter') {
-                        const selection = window.getSelection();
-                        const range = selection.getRangeAt(0);
-                        let element = range.startContainer;
-                        
-                        while (element && element.nodeName !== 'LI') {
-                            element = element.parentElement;
-                        }
-                        
-                        if (element) {
-                            if (e.key === 'Tab') {
-                                e.preventDefault();
-                                
-                                if (e.shiftKey) {
-                                    const parentList = element.parentElement;
-                                    const grandParentLi = parentList.parentElement;
-                                    if (grandParentLi && grandParentLi.nodeName === 'LI') {
-                                        // Sauvegarder la position actuelle du curseur
-                                        const savedSelection = {
-                                            node: range.startContainer,
-                                            offset: range.startOffset
-                                        };
-                                        
-                                        // Effectuer la désindentation
-                                        const greatGrandParentList = grandParentLi.parentElement;
-                                        greatGrandParentList.insertBefore(element, grandParentLi.nextSibling);
-                                        
-                                        // Restaurer la position du curseur
-                                        const newRange = document.createRange();
-                                        newRange.setStart(savedSelection.node, savedSelection.offset);
-                                        newRange.collapse(true);
-                                        selection.removeAllRanges();
-                                        selection.addRange(newRange);
-                                        
-                                        // S'assurer que l'élément est visible
-                                        element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                                    }
-                                } else {
-                                    const prevLi = element.previousElementSibling;
-                                    if (prevLi) {
-                                        let subList = prevLi.querySelector('ul');
-                                        if (!subList) {
-                                            subList = document.createElement('ul');
-                                            prevLi.appendChild(subList);
-                                        }
-                                        subList.appendChild(element);
-                                    }
-                                }
-                            } else if (e.key === 'Enter' && element.textContent.trim() === '') {
-                                e.preventDefault();
-                                const parentList = element.parentElement;
-                                element.remove();
-                                if (parentList.children.length === 0) {
-                                    parentList.remove();
-                                }
-                                document.execCommand('insertParagraph');
-                            }
-                        }
-                    }
-                });
-
-                contentDiv.addEventListener('paste', (e) => {
-                    e.preventDefault();
-                    const text = e.clipboardData.getData('text/plain');
-                    document.execCommand('insertText', false, text);
-                });
-
-                contentDiv.focus();
-
-                // Ajouter l'auto-sauvegarde
+                // Ajouter un gestionnaire d'événements pour l'auto-sauvegarde
                 contentDiv.addEventListener('input', () => {
-                    if (saveTimeout) clearTimeout(saveTimeout);
+                    if (typeof saveTimeout !== 'undefined') {
+                        if (saveTimeout) clearTimeout(saveTimeout);
+                    }
                     
                     saveTimeout = setTimeout(async () => {
                         try {
+                            const dateParam = getUrlParameter('date');
+                            const now = new Date();
+                            const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+                                .toISOString()
+                                .split('T')[0];
+                            const targetDate = dateParam || today;
+
                             const update = {};
                             update[`${updatePath}.content`] = contentDiv.innerHTML;
                             update[`${updatePath}.updatedAt`] = new Date().toISOString();
@@ -585,7 +573,7 @@
                             await window.db.collection('users')
                                 .doc(userId)
                                 .collection('retours')
-                                .doc(dateParam)
+                                .doc(targetDate)
                                 .update(update);
                             
                         } catch (error) {
@@ -595,17 +583,7 @@
                     }, 1000); // Sauvegarde 1 seconde après la dernière modification
                 });
 
-                // Ajouter l'avertissement quand on quitte la page
-                window.addEventListener('beforeunload', (e) => {
-                    const contentDiv = document.getElementById('activityContent');
-                    if (contentDiv && contentDiv.dataset.updatePath) {
-                        e.preventDefault();
-                        e.returnValue = '';
-                    }
-                });
-
                 setTimeout(() => editor.classList.remove('loading'), 500);
-
             } catch (error) {
                 console.error('Erreur lors de la sélection:', error);
                 showNotification('Erreur lors de la sélection', 'error');
@@ -714,11 +692,18 @@
         async function deleteActivity(activityId, section) {
             try {
                 const userId = window.auth.currentUser.uid;
-                const dateParam = getUrlParameter('date') || new Date().toISOString().split('T')[0];
+                const dateParam = getUrlParameter('date');
+                // Utiliser la date d'aujourd'hui si aucune date n'est spécifiée
+                const now = new Date();
+                const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+                    .toISOString()
+                    .split('T')[0];
+                const targetDate = dateParam || today;
+
                 const retourRef = window.db.collection('users')
                     .doc(userId)
                     .collection('retours')
-                    .doc(dateParam);
+                    .doc(targetDate);
 
                 const retourDoc = await retourRef.get();
                 if (!retourDoc.exists) return;
@@ -743,6 +728,12 @@
                     element.remove();
                 }
 
+                // Effacer l'éditeur si l'activité supprimée était sélectionnée
+                const editor = document.getElementById('editor');
+                if (element.classList.contains('active')) {
+                    editor.innerHTML = '<p>Sélectionnez une activité pour commencer l\'édition...</p>';
+                }
+
                 showNotification('Activité supprimée avec succès');
             } catch (error) {
                 console.error('Erreur lors de la suppression:', error);
@@ -756,11 +747,18 @@
             const saveBtn = document.querySelector('.save-btn');
             saveBtn.classList.add('loading');
             try {
+                const dateParam = getUrlParameter('date');
+                const now = new Date();
+                const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+                    .toISOString()
+                    .split('T')[0];
+                const targetDate = dateParam || today;
+
                 await saveContentWithCorrection(
                     contentDiv,
                     contentDiv.dataset.updatePath,
                     window.auth.currentUser.uid,
-                    getUrlParameter('date') || new Date().toISOString().split('T')[0]
+                    targetDate
                 );
                 showNotification('Activité sauvegardée avec succès');
             } catch (error) {

@@ -35,7 +35,21 @@
         <div class="sidebar">
             <div class="date-selector">
                 <label for="dateSelector">Sélectionner une date</label>
-                <input type="date" id="dateSelector" class="date-input">
+                <div class="date-input-wrapper">
+                    <input type="date" 
+                           id="datePicker" 
+                           style="display: none;">
+                    <input type="text" 
+                           id="dateSelector" 
+                           class="date-input" 
+                           pattern="\d{2}-\d{2}-\d{4}"
+                           placeholder="JJ-MM-AAAA"
+                           maxlength="10"
+                           readonly>
+                    <button type="button" class="calendar-btn">
+                        <span class="calendar-icon">📅</span>
+                    </button>
+                </div>
             </div>
             <div id="retoursList" class="retours-list"></div>
         </div>
@@ -150,25 +164,78 @@
             }
         });
 
-        // Chargement des retours
-        async function loadRetours() {
+        // Ajouter cette fonction après la configuration Firebase
+        function formatDate(event) {
+            // Autoriser seulement les chiffres
+            if (!/[0-9]/.test(event.key)) {
+                event.preventDefault();
+                return false;
+            }
+
+            const input = event.target;
+            const value = input.value;
+            
+            // Ajouter automatiquement les tirets
+            if (value.length === 2 || value.length === 5) {
+                input.value = value + '-';
+            }
+
+            // Empêcher plus de 10 caractères
+            if (value.length >= 10) {
+                event.preventDefault();
+                return false;
+            }
+
+            return true;
+        }
+
+        // Ajouter après la fonction formatDate
+        function initDatePicker() {
             const dateSelector = document.getElementById('dateSelector');
-            const today = new Date().toISOString().split('T')[0];
-            dateSelector.value = today;
-            dateSelector.max = today;
-
-            dateSelector.addEventListener('change', (e) => {
-                const selectedDate = e.target.value;
-                if (selectedDate) {
-                    loadRetourContent(selectedDate);
-                } else {
-                    clearContent();
-                }
+            const datePicker = document.getElementById('datePicker');
+            const calendarBtn = document.querySelector('.calendar-btn');
+            
+            // Initialiser avec la date d'aujourd'hui
+            const today = new Date();
+            // Permettre la sélection jusqu'à la fin de l'année suivante
+            const maxDate = new Date(today.getFullYear() + 1, 11, 31); // 31 décembre de l'année suivante
+            datePicker.max = maxDate.toISOString().split('T')[0];
+            
+            // Formater la date pour l'affichage
+            const formattedToday = today.toLocaleDateString('fr-FR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            }).replace(/\//g, '-');
+            
+            dateSelector.value = formattedToday;
+            datePicker.value = today.toISOString().split('T')[0];
+            
+            // Gérer le clic sur le bouton calendrier
+            calendarBtn.addEventListener('click', () => {
+                datePicker.showPicker();
             });
+            
+            // Mettre à jour le champ texte quand une date est sélectionnée
+            datePicker.addEventListener('change', (e) => {
+                const selectedDate = new Date(e.target.value);
+                const formattedDate = selectedDate.toLocaleDateString('fr-FR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                }).replace(/\//g, '-');
+                
+                dateSelector.value = formattedDate;
+                loadRetourContent(e.target.value);
+            });
+        }
 
-            // Charger la liste des retours existants
+        // Modifier la fonction loadRetours
+        async function loadRetours() {
+            initDatePicker();
             await loadRetoursList();
-            await loadRetourContent(today);
+            const today = new Date();
+            await loadRetourContent(today.toISOString().split('T')[0]);
         }
 
         async function loadRetourContent(date) {
@@ -216,7 +283,7 @@
                 .map(([id, activity]) => ({
                     id,
                     ...activity,
-                    number: parseInt(activity.title.match(/\d+$/)?.[0] || '0')
+                    number: parseInt(activity.title?.match(/\d+$/)?.[0] || '0')
                 }))
                 .sort((a, b) => a.number - b.number);
             
@@ -232,7 +299,7 @@
                 .map(([id, activity]) => ({
                     id,
                     ...activity,
-                    number: parseInt(activity.title.match(/\d+$/)?.[0] || '0')
+                    number: parseInt(activity.title?.match(/\d+$/)?.[0] || '0')
                 }))
                 .sort((a, b) => a.number - b.number);
             
@@ -248,7 +315,7 @@
                 .map(([id, problem]) => ({
                     id,
                     ...problem,
-                    number: parseInt(problem.title.match(/\d+$/)?.[0] || '0')
+                    number: parseInt(problem.title?.match(/\d+$/)?.[0] || '0')
                 }))
                 .sort((a, b) => a.number - b.number);
             
