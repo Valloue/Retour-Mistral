@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RetourMistral - Saisie Retour</title>
+    <link rel="stylesheet" href="../css/themes.css">
     <link rel="stylesheet" href="../css/common.css">
     <link rel="stylesheet" href="../css/saisie-retour.css">
+    <script src="../js/theme.js"></script>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -18,6 +20,14 @@
             <a href="saisie-retour.html" class="active">Saisie Retour</a>
             <a href="consultation.html">Consultation</a>
             <a href="compte.html">Mon Compte</a>
+        </div>
+        <div class="theme-switch">
+            <span class="theme-icon">☀️</span>
+            <label class="switch">
+                <input type="checkbox" id="themeToggle" aria-label="Basculer le thème clair/sombre">
+                <span class="slider"></span>
+            </label>
+            <span class="theme-icon">🌙</span>
         </div>
         <button id="logoutBtn" class="logout-btn">Déconnexion</button>
     </nav>
