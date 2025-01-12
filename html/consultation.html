@@ -332,13 +332,69 @@
         async function copyRetour() {
             try {
                 const retourTitle = document.getElementById('retourTitle').textContent;
-                const matinContent = formatSectionContent('Activités Matin', document.getElementById('activitesMatin'));
-                const apresMidiContent = formatSectionContent('Activités Après-midi', document.getElementById('activitesApresMidi'));
-                const problematiquesContent = formatSectionContent('Problématiques', document.getElementById('problematiques'));
+                let fullContent = `${retourTitle}\n\n`;
 
-                // Formater le contenu avec une meilleure structure
-                const fullContent = `${retourTitle}\n\nActivités Matin:\n${matinContent}\n\nActivités Après-midi:\n${apresMidiContent}\n\nProblématiques:\n${problematiquesContent}`;
-                
+                function cleanHtml(html) {
+                    // Créer un élément temporaire
+                    const temp = document.createElement('div');
+                    temp.innerHTML = html;
+                    
+                    // Convertir les listes en format texte
+                    temp.querySelectorAll('ul').forEach(ul => {
+                        const items = Array.from(ul.children).map(li => {
+                            return `• ${li.textContent.trim()}`;
+                        });
+                        ul.parentNode.replaceChild(
+                            document.createTextNode('\n' + items.join('\n')),
+                            ul
+                        );
+                    });
+
+                    // Remplacer les <br> et <div> par des sauts de ligne
+                    const text = temp.innerHTML
+                        .replace(/<br\s*\/?>/gi, '\n')
+                        .replace(/<\/?div>/gi, '\n')
+                        .replace(/<[^>]+>/g, '')  // Supprimer les autres balises HTML
+                        .replace(/&nbsp;/g, ' ')  // Convertir les espaces HTML
+                        .replace(/\n\s*\n/g, '\n')  // Supprimer les lignes vides multiples
+                        .trim();
+
+                    return text;
+                }
+
+                // Activités Matin
+                fullContent += 'Activités Matin :\n';
+                const matinActivities = document.querySelectorAll('#activitesMatin .activity-item');
+                matinActivities.forEach(activity => {
+                    const content = activity.querySelector('.activity-content')?.innerHTML || '';
+                    const cleanContent = cleanHtml(content);
+                    if (cleanContent) {
+                        fullContent += `- ${cleanContent}\n\n`;
+                    }
+                });
+
+                // Activités Après-midi
+                fullContent += 'Activités Après-midi :\n';
+                const apresMidiActivities = document.querySelectorAll('#activitesApresMidi .activity-item');
+                apresMidiActivities.forEach(activity => {
+                    const content = activity.querySelector('.activity-content')?.innerHTML || '';
+                    const cleanContent = cleanHtml(content);
+                    if (cleanContent) {
+                        fullContent += `- ${cleanContent}\n\n`;
+                    }
+                });
+
+                // Problématiques
+                fullContent += 'Problématiques :\n';
+                const problematiques = document.querySelectorAll('#problematiques .activity-item');
+                problematiques.forEach(problem => {
+                    const content = problem.querySelector('.activity-content')?.innerHTML || '';
+                    const cleanContent = cleanHtml(content);
+                    if (cleanContent) {
+                        fullContent += `- ${cleanContent}\n\n`;
+                    }
+                });
+
                 await navigator.clipboard.writeText(fullContent);
                 showNotification('Rapport copié dans le presse-papier');
             } catch (error) {
@@ -396,36 +452,117 @@
             return formattedActivities;
         }
 
-        async function exportToPDF() {
-            try {
-                const retourTitle = document.getElementById('retourTitle').textContent;
-                const content = document.querySelector('.content-sections').cloneNode(true);
+        function formatSectionForPDF(sectionId) {
+            const activities = document.querySelectorAll(`#${sectionId} .activity-item`);
+            let content = '';
+            
+            activities.forEach(activity => {
+                const activityContent = activity.querySelector('.activity-content');
+                if (!activityContent) return;
+
+                content += '<div class="activity-content">';
                 
-                // Créer un élément temporaire pour le style d'impression
+                // Traiter le texte direct et le contenu
+                let allText = '';
+                
+                // Récupérer tout le texte, y compris celui des balises div
+                function extractText(element) {
+                    Array.from(element.childNodes).forEach(node => {
+                        if (node.nodeType === 3) { // Nœud texte
+                            const text = node.textContent.trim();
+                            if (text) allText += text + ' ';
+                        } else if (node.nodeType === 1) { // Élément
+                            if (node.tagName.toLowerCase() !== 'ul') {
+                                extractText(node);
+                            }
+                        }
+                    });
+                }
+                
+                extractText(activityContent);
+                
+                if (allText.trim()) {
+                    content += `- ${allText.trim()}`;
+                }
+
+                // Traiter les listes
+                activityContent.querySelectorAll('ul').forEach(ul => {
+                    const items = Array.from(ul.children).map(li => {
+                        return `<br>• ${li.textContent.trim()}`;
+                    }).join('');
+                    content += items;
+                });
+
+                content += '</div>';
+            });
+            
+            return content;
+        }
+
+        function exportToPDF() {
+            try {
                 const printContent = document.createElement('div');
+                const retourTitle = document.getElementById('retourTitle').textContent;
+                
                 printContent.innerHTML = `
                     <h1>${retourTitle}</h1>
-                    ${content.innerHTML}
+                    
+                    <h2>Activités Matin :</h2>
+                    ${formatSectionForPDF('activitesMatin')}
+                    
+                    <h2>Activités Après-midi :</h2>
+                    ${formatSectionForPDF('activitesApresMidi')}
+                    
+                    <h2>Problématiques :</h2>
+                    ${formatSectionForPDF('problematiques')}
                 `;
-                
-                const printWindow = window.open('', '', 'height=600,width=800');
-                printWindow.document.write('<html><head><title>Rapport</title>');
-                printWindow.document.write('<style>');
+
+                const printWindow = window.open('', '_blank');
                 printWindow.document.write(`
-                    body { font-family: Arial, sans-serif; padding: 20px; }
-                    h1 { color: #202124; margin-bottom: 20px; }
-                    .section { margin-bottom: 20px; }
-                    .activity-item { margin-bottom: 15px; }
-                    h3 { color: #1a73e8; margin-bottom: 5px; }
+                    <html>
+                    <head>
+                        <title>Rapport - ${retourTitle}</title>
+                        <style>
+                            body { 
+                                font-family: Arial, sans-serif; 
+                                padding: 20px;
+                                line-height: 1.6;
+                            }
+                            h1 { 
+                                color: #202124; 
+                                margin-bottom: 20px;
+                                font-size: 24px;
+                            }
+                            h2 { 
+                                color: #1a73e8; 
+                                margin: 20px 0 10px 0;
+                                font-size: 18px;
+                            }
+                            .activity-content {
+                                margin: 10px 0 20px 20px;
+                                padding-left: 20px;
+                                text-indent: -20px;
+                            }
+                            ul {
+                                margin: 5px 0 5px 20px;
+                                padding-left: 15px;
+                                list-style-type: none;
+                            }
+                            li {
+                                margin: 5px 0;
+                                text-indent: -15px;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        ${printContent.innerHTML}
+                    </body>
+                    </html>
                 `);
-                printWindow.document.write('</style></head><body>');
-                printWindow.document.write(printContent.innerHTML);
-                printWindow.document.write('</body></html>');
-                
+
                 printWindow.document.close();
                 printWindow.focus();
                 
-                // Attendre que le contenu soit chargé
                 setTimeout(() => {
                     printWindow.print();
                     printWindow.close();
