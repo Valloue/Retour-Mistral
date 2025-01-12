@@ -51,8 +51,14 @@
         </div>
     </div>
 
-    <!-- Initialisation Firebase -->
     <script>
+        // Définir la fonction avant toute initialisation
+        function getUrlParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // Configuration Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyCEvK9CVWCmNGmOvHtwNnEJ65A_33JgSq0",
             authDomain: "retour-mistral.firebaseapp.com",
@@ -65,11 +71,15 @@
         firebase.initializeApp(firebaseConfig);
         window.auth = firebase.auth();
         window.db = firebase.firestore();
-    </script>
 
-    <!-- Logique de l'application -->
-    <script>
-        // Vérification de l'authentification et création du retour quotidien
+        // Variables globales pour stocker les références aux listes d'activités
+        const activitesLists = {
+            matin: document.getElementById('activitesMatin'),
+            apresMidi: document.getElementById('activitesApresMidi'),
+            problematiques: document.getElementById('problematiques')
+        };
+
+        // Vérification de l'authentification et chargement du retour
         window.auth.onAuthStateChanged(async (user) => {
             if (!user) {
                 window.location.href = 'login.html';
@@ -77,47 +87,45 @@
             }
 
             try {
-                // Récupérer les données de l'utilisateur
-                const userDoc = await window.db.collection('users').doc(user.uid).get();
-                const username = userDoc.data().username;
-                
-                // Créer le retour du jour
-                const today = new Date().toISOString().split('T')[0];
-                const formattedDate = formatDate(new Date());
-                const retourTitle = `Retour ${username} ${formattedDate}`;
-                
-                // Référence au document du jour
-                const userDayRef = window.db.collection('users')
-                    .doc(user.uid)
-                    .collection('retours')
-                    .doc(today);
+                const dateParam = getUrlParameter('date');
+                if (dateParam) {
+                    // Si une date est spécifiée, charger ce retour
+                    const retourDoc = await window.db.collection('users')
+                        .doc(user.uid)
+                        .collection('retours')
+                        .doc(dateParam)
+                        .get();
 
-                // Vérifier si le retour existe déjà
-                const doc = await userDayRef.get();
-                if (!doc.exists) {
+                    if (retourDoc.exists) {
+                        const data = retourDoc.data();
+                        document.getElementById('retourTitle').textContent = data['2_title'];
+
+                        // Charger les activités du matin
+                        Object.entries(data['3_matin'].activites || {}).forEach(([id, activity]) => {
+                            addActivityToList('matin', { id, title: activity.title });
+                        });
+
+                        // Charger les activités de l'après-midi
+                        Object.entries(data['4_apresMidi'].activites || {}).forEach(([id, activity]) => {
+                            addActivityToList('apresMidi', { id, title: activity.title });
+                        });
+
+                        // Charger les problématiques
+                        Object.entries(data['5_problematiques'].items || {}).forEach(([id, problem]) => {
+                            addActivityToList('problematiques', { id, title: problem.title });
+                        });
+                    }
+                } else {
                     // Créer un nouveau retour pour aujourd'hui
-                    await userDayRef.set({
-                        '1_date': today,
-                        '2_title': retourTitle,
-                        '3_matin': {
-                            activites: {}
-                        },
-                        '4_apresMidi': {
-                            activites: {}
-                        },
-                        '5_problematiques': {
-                            items: {}
-                        }
-                    });
-                    console.log('Nouveau retour créé pour aujourd\'hui');
+                    const userDoc = await window.db.collection('users').doc(user.uid).get();
+                    const username = userDoc.data().username;
+                    
+                    const today = new Date().toISOString().split('T')[0];
+                    const formattedDate = formatDate(new Date());
+                    const retourTitle = `Retour ${username} ${formattedDate}`;
+                    
+                    document.getElementById('retourTitle').textContent = retourTitle;
                 }
-
-                // Mettre à jour le titre dans l'interface
-                document.getElementById('retourTitle').textContent = retourTitle;
-
-                // Charger les activités existantes
-                await loadActivities();
-
             } catch (error) {
                 console.error('Erreur lors de l\'initialisation:', error);
                 alert('Erreur lors de l\'initialisation de la page');
@@ -136,12 +144,6 @@
 
         // Gestion des activités
         const addButtons = document.querySelectorAll('.add-btn');
-        const activitesLists = {
-            matin: document.getElementById('activitesMatin'),
-            apresMidi: document.getElementById('activitesApresMidi'),
-            problematiques: document.getElementById('problematiques')
-        };
-
         addButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const section = button.dataset.section;
@@ -155,44 +157,9 @@
 
             try {
                 const userId = window.auth.currentUser.uid;
-                const today = new Date().toISOString().split('T')[0];
-                
-                // Récupérer le nom d'utilisateur
-                const userDoc = await window.db.collection('users').doc(userId).get();
-                const username = userDoc.data().username;
-                
-                // Formater la date pour le titre
-                const formattedDate = formatDate(new Date());
-                const retourTitle = `Retour ${username} ${formattedDate}`;
-                
-                // Créer/obtenir le document du jour pour l'utilisateur
-                const userDayRef = window.db.collection('users')
-                    .doc(userId)
-                    .collection('retours')
-                    .doc(today);
-
-                // Vérifier si le document existe déjà
-                const doc = await userDayRef.get();
-                if (!doc.exists) {
-                    await userDayRef.set({
-                        '1_date': today,
-                        '2_title': retourTitle,
-                        '3_matin': {
-                            activites: {}
-                        },
-                        '4_apresMidi': {
-                            activites: {}
-                        },
-                        '5_problematiques': {
-                            items: {}
-                        }
-                    });
-                }
-
-                // Générer un ID unique pour l'activité
+                const dateParam = getUrlParameter('date') || new Date().toISOString().split('T')[0];
                 const activityId = window.db.collection('_').doc().id;
 
-                // Définir le chemin selon la section
                 let updatePath;
                 if (section === 'matin') {
                     updatePath = `3_matin.activites.${activityId}`;
@@ -202,7 +169,6 @@
                     updatePath = `5_problematiques.items.${activityId}`;
                 }
 
-                // Créer l'objet de mise à jour
                 const update = {};
                 update[updatePath] = {
                     title: title,
@@ -210,10 +176,12 @@
                     createdAt: new Date().toISOString()
                 };
 
-                // Mettre à jour le document
-                await userDayRef.update(update);
+                await window.db.collection('users')
+                    .doc(userId)
+                    .collection('retours')
+                    .doc(dateParam)
+                    .update(update);
 
-                // Ajouter à la liste dans l'interface
                 addActivityToList(section, {
                     id: activityId,
                     title: title
@@ -228,79 +196,32 @@
             const div = document.createElement('div');
             div.className = 'activity-item';
             div.dataset.id = activity.id;
-
-            // Créer un conteneur pour le titre et le bouton
-            const contentWrapper = document.createElement('div');
-            contentWrapper.className = 'activity-item-content';
-            
-            // Ajouter le titre
-            const titleSpan = document.createElement('span');
-            titleSpan.textContent = activity.title;
-            titleSpan.onclick = () => selectActivity(activity.id);
-            contentWrapper.appendChild(titleSpan);
-            
-            // Ajouter le bouton de suppression
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'delete-btn';
-            deleteBtn.innerHTML = '🗑️';
-            deleteBtn.title = 'Supprimer';
-            deleteBtn.onclick = async (e) => {
-                e.stopPropagation(); // Empêcher la sélection de l'activité
-                if (confirm('Voulez-vous vraiment supprimer cette activité ?')) {
-                    try {
-                        const userId = window.auth.currentUser.uid;
-                        const today = new Date().toISOString().split('T')[0];
-                        const userDayRef = window.db.collection('users')
-                            .doc(userId)
-                            .collection('retours')
-                            .doc(today);
-
-                        // Créer l'objet de mise à jour pour supprimer l'activité
-                        const update = {};
-                        if (section === 'matin') {
-                            update[`3_matin.activites.${activity.id}`] = firebase.firestore.FieldValue.delete();
-                        } else if (section === 'apresMidi') {
-                            update[`4_apresMidi.activites.${activity.id}`] = firebase.firestore.FieldValue.delete();
-                        } else {
-                            update[`5_problematiques.items.${activity.id}`] = firebase.firestore.FieldValue.delete();
-                        }
-
-                        await userDayRef.update(update);
-                        div.remove();
-                    } catch (error) {
-                        console.error('Erreur lors de la suppression:', error);
-                        alert('Erreur lors de la suppression');
-                    }
-                }
-            };
-            contentWrapper.appendChild(deleteBtn);
-
-            div.appendChild(contentWrapper);
+            div.textContent = activity.title;
+            div.onclick = () => selectActivity(activity.id);
             activitesLists[section].appendChild(div);
         }
 
         async function selectActivity(activityId) {
             try {
                 const userId = window.auth.currentUser.uid;
-                const today = new Date().toISOString().split('T')[0];
-                const userDayRef = window.db.collection('users')
+                const dateParam = getUrlParameter('date') || new Date().toISOString().split('T')[0];
+                
+                const retourDoc = await window.db.collection('users')
                     .doc(userId)
                     .collection('retours')
-                    .doc(today);
+                    .doc(dateParam)
+                    .get();
 
-                const doc = await userDayRef.get();
-                const data = doc.data();
+                if (!retourDoc.exists) return;
 
-                // Désélectionner l'activité précédente
-                document.querySelectorAll('.activity-item.active').forEach(item => {
+                const data = retourDoc.data();
+                document.querySelectorAll('.activity-item').forEach(item => {
                     item.classList.remove('active');
                 });
 
-                // Sélectionner la nouvelle activité
                 const activityElement = document.querySelector(`[data-id="${activityId}"]`);
                 activityElement.classList.add('active');
 
-                // Chercher l'activité dans toutes les sections
                 let activityData;
                 let updatePath;
 
@@ -315,12 +236,8 @@
                     updatePath = `5_problematiques.items.${activityId}`;
                 }
 
-                if (!activityData) {
-                    console.error('Activité non trouvée');
-                    return;
-                }
+                if (!activityData) return;
 
-                // Créer et configurer la zone de texte
                 const editor = document.getElementById('editor');
                 editor.innerHTML = `
                     <div class="editor-content">
@@ -338,13 +255,11 @@
                     </div>
                 `;
 
-                // Fonction de formatage
                 window.formatDoc = function(cmd) {
                     document.execCommand(cmd, false, null);
                     document.getElementById('activityContent').focus();
                 };
 
-                // Ajouter l'écouteur d'événements pour la sauvegarde automatique
                 const contentDiv = document.getElementById('activityContent');
                 let saveTimeout;
 
@@ -357,7 +272,12 @@
                             update[`${updatePath}.content`] = contentDiv.innerHTML;
                             update[`${updatePath}.updatedAt`] = new Date().toISOString();
 
-                            await userDayRef.update(update);
+                            await window.db.collection('users')
+                                .doc(userId)
+                                .collection('retours')
+                                .doc(dateParam)
+                                .update(update);
+                            
                             console.log('Contenu sauvegardé');
                         } catch (error) {
                             console.error('Erreur lors de la sauvegarde:', error);
@@ -366,7 +286,7 @@
                     }, 500);
                 });
 
-                // Gestion des puces avec le tiret
+                // Gestion des puces
                 contentDiv.addEventListener('keydown', (e) => {
                     if (e.key === ' ') {
                         const selection = window.getSelection();
@@ -404,24 +324,22 @@
                     }
                 });
 
-                // Gestion de l'indentation et désindentation
+                // Gestion de l'indentation
                 contentDiv.addEventListener('keydown', (e) => {
                     if (e.key === 'Tab' || e.key === 'Enter') {
                         const selection = window.getSelection();
                         const range = selection.getRangeAt(0);
                         let element = range.startContainer;
                         
-                        // Remonter jusqu'à trouver un élément li
                         while (element && element.nodeName !== 'LI') {
                             element = element.parentElement;
                         }
                         
-                        if (element) { // Si on est dans une puce
+                        if (element) {
                             if (e.key === 'Tab') {
                                 e.preventDefault();
                                 
                                 if (e.shiftKey) {
-                                    // Désindenter
                                     const parentList = element.parentElement;
                                     const grandParentLi = parentList.parentElement;
                                     if (grandParentLi && grandParentLi.nodeName === 'LI') {
@@ -446,7 +364,6 @@
                                         element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                                     }
                                 } else {
-                                    // Indenter
                                     const prevLi = element.previousElementSibling;
                                     if (prevLi) {
                                         let subList = prevLi.querySelector('ul');
@@ -459,7 +376,6 @@
                                 }
                             } else if (e.key === 'Enter' && element.textContent.trim() === '') {
                                 e.preventDefault();
-                                // Supprimer la puce vide
                                 const parentList = element.parentElement;
                                 element.remove();
                                 if (parentList.children.length === 0) {
@@ -471,108 +387,23 @@
                     }
                 });
 
-                // Ajouter un gestionnaire pour le collage de texte propre
                 contentDiv.addEventListener('paste', (e) => {
                     e.preventDefault();
                     const text = e.clipboardData.getData('text/plain');
                     document.execCommand('insertText', false, text);
                 });
 
-                // Donner le focus à la zone de texte
                 contentDiv.focus();
-
             } catch (error) {
                 console.error('Erreur:', error);
                 alert('Erreur lors du chargement de l\'activité');
             }
         }
 
-        // Charger les activités existantes
-        async function loadActivities() {
-            try {
-                const userId = window.auth.currentUser.uid;
-                const today = new Date().toISOString().split('T')[0];
-                
-                // Récupérer le nom d'utilisateur
-                const userDoc = await window.db.collection('users').doc(userId).get();
-                const username = userDoc.data().username;
-                
-                // Formater la date pour le titre
-                const formattedDate = formatDate(new Date());
-                const retourTitle = `Retour ${username} ${formattedDate}`;
-                
-                // Récupérer le document du jour
-                const userDayRef = window.db.collection('users')
-                    .doc(userId)
-                    .collection('retours')
-                    .doc(today);
-
-                const doc = await userDayRef.get();
-                
-                // Si le document n'existe pas, le créer
-                if (!doc.exists) {
-                    await userDayRef.set({
-                        '1_date': today,
-                        '2_title': retourTitle,
-                        '3_matin': {
-                            activites: {}
-                        },
-                        '4_apresMidi': {
-                            activites: {}
-                        },
-                        '5_problematiques': {
-                            items: {}
-                        }
-                    });
-                    return; // Retourner car il n'y a pas encore d'activités à charger
-                }
-
-                const data = doc.data();
-
-                // Charger les activités existantes
-                if (data['3_matin'] && data['3_matin'].activites) {
-                    Object.entries(data['3_matin'].activites).forEach(([id, activity]) => {
-                        addActivityToList('matin', { id, title: activity.title });
-                    });
-                }
-
-                if (data['4_apresMidi'] && data['4_apresMidi'].activites) {
-                    Object.entries(data['4_apresMidi'].activites).forEach(([id, activity]) => {
-                        addActivityToList('apresMidi', { id, title: activity.title });
-                    });
-                }
-
-                if (data['5_problematiques'] && data['5_problematiques'].items) {
-                    Object.entries(data['5_problematiques'].items).forEach(([id, problem]) => {
-                        addActivityToList('problematiques', { id, title: problem.title });
-                    });
-                }
-
-                // Mettre à jour le titre dans l'interface
-                document.getElementById('retourTitle').textContent = data['2_title'] || retourTitle;
-
-            } catch (error) {
-                console.error('Erreur lors du chargement:', error);
-            }
-        }
-
-        // Fonction pour formater la date
         function formatDate(date) {
             const day = String(date.getDate()).padStart(2, '0');
             const month = String(date.getMonth() + 1).padStart(2, '0');
             return `${day}/${month}`;
-        }
-
-        // Ajouter cette fonction utilitaire
-        function isStartOfLine(node) {
-            const range = document.createRange();
-            range.selectNodeContents(node);
-            range.collapse(true);
-            const preCaretRange = range.cloneRange();
-            preCaretRange.selectNodeContents(node.parentNode);
-            preCaretRange.setEnd(range.endContainer, range.endOffset);
-            const text = preCaretRange.toString();
-            return text.trim().length === 0 || text.endsWith('\n');
         }
     </script>
 </body>
