@@ -35,7 +35,21 @@
         <div class="sidebar">
             <div class="date-selector">
                 <label for="dateSelector">Sélectionner une date</label>
-                <input type="date" id="dateSelector" class="date-input">
+                <div class="date-input-wrapper">
+                    <input type="date" 
+                           id="datePicker" 
+                           style="display: none;">
+                    <input type="text" 
+                           id="dateSelector" 
+                           class="date-input" 
+                           pattern="\d{2}/\d{2}/\d{4}"
+                           placeholder="JJ/MM/AAAA"
+                           maxlength="10"
+                           readonly>
+                    <button type="button" class="calendar-btn">
+                        <span class="calendar-icon">📅</span>
+                    </button>
+                </div>
             </div>
             <div id="retoursList" class="retours-list"></div>
         </div>
@@ -150,24 +164,125 @@
             }
         });
 
-        // Chargement des retours
-        async function loadRetours() {
+        // Ajouter cette fonction après la configuration Firebase
+        function formatDate(event) {
+            // Autoriser seulement les chiffres
+            if (!/[0-9]/.test(event.key)) {
+                event.preventDefault();
+                return false;
+            }
+
+            const input = event.target;
+            const value = input.value;
+            
+            // Ajouter automatiquement les tirets
+            if (value.length === 2 || value.length === 5) {
+                input.value = value + '-';
+            }
+
+            // Empêcher plus de 10 caractères
+            if (value.length >= 10) {
+                event.preventDefault();
+                return false;
+            }
+
+            return true;
+        }
+
+        // Ajouter après la fonction formatDate
+        function initDatePicker() {
             const dateSelector = document.getElementById('dateSelector');
-            const today = new Date().toISOString().split('T')[0];
-            dateSelector.value = today;
-            dateSelector.max = today;
-
-            dateSelector.addEventListener('change', () => {
-                loadRetourContent(dateSelector.value);
+            const datePicker = document.getElementById('datePicker');
+            const calendarBtn = document.querySelector('.calendar-btn');
+            
+            // Initialiser avec la date d'aujourd'hui
+            const today = new Date();
+            // Permettre la sélection jusqu'à la fin de l'année suivante
+            const maxDate = new Date(today.getFullYear() + 1, 11, 31);
+            datePicker.max = maxDate.toISOString().split('T')[0];
+            
+            // Formater la date pour l'affichage
+            const formattedToday = today.toLocaleDateString('fr-FR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
             });
+            
+            dateSelector.value = formattedToday;
+            datePicker.value = today.toISOString().split('T')[0];
+            
+            // Gérer le clic sur le bouton calendrier
+            calendarBtn.addEventListener('click', () => {
+                datePicker.showPicker();
+            });
+            
+            // Mettre à jour le champ texte quand une date est sélectionnée
+            datePicker.addEventListener('change', (e) => {
+                const selectedDate = new Date(e.target.value);
+                const formattedDate = selectedDate.toLocaleDateString('fr-FR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+                
+                dateSelector.value = formattedDate;
+                loadRetourContent(e.target.value);
+            });
+        }
 
-            // Charger la liste des retours existants
+        // Modifier la fonction loadRetours
+        async function loadRetours() {
+            initDatePicker();
+            // Charger d'abord la liste des retours
             await loadRetoursList();
-            await loadRetourContent(today);
+
+            try {
+                // Récupérer le dernier retour créé
+                const userId = window.auth.currentUser.uid;
+                const retoursRef = window.db.collection('users')
+                    .doc(userId)
+                    .collection('retours')
+                    .orderBy('1_date', 'desc')
+                    .limit(1);
+
+                const snapshot = await retoursRef.get();
+                
+                if (!snapshot.empty) {
+                    const lastRetour = snapshot.docs[0];
+                    // Mettre à jour le sélecteur de date
+                    const datePicker = document.getElementById('datePicker');
+                    const dateSelector = document.getElementById('dateSelector');
+                    
+                    const date = new Date(lastRetour.data()['1_date']);
+                    datePicker.value = lastRetour.data()['1_date'];
+                    dateSelector.value = date.toLocaleDateString('fr-FR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
+
+                    // Charger le contenu du dernier retour
+                    await loadRetourContent(lastRetour.data()['1_date']);
+                } else {
+                    // Si aucun retour n'existe, afficher un message
+                    clearContent();
+                    showNotification('Aucun retour disponible', 'info');
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement du dernier retour:', error);
+                showNotification('Erreur lors du chargement', 'error');
+            }
         }
 
         async function loadRetourContent(date) {
             try {
+                // Vérifier si la date est valide
+                if (!date) {
+                    console.log('Date invalide');
+                    clearContent();
+                    return;
+                }
+
                 const mainContent = document.querySelector('.main-content');
                 mainContent.classList.add('loading');
                 const userId = window.auth.currentUser.uid;
@@ -178,6 +293,7 @@
 
                 const doc = await retourRef.get();
                 if (!doc.exists) {
+                    console.log('Aucun retour trouvé pour cette date');
                     clearContent();
                     return;
                 }
@@ -186,7 +302,9 @@
                 displayRetourContent(data);
                 setTimeout(() => mainContent.classList.remove('loading'), 500);
             } catch (error) {
-                console.error('Erreur lors du chargement:', error);
+                console.error('Erreur lors du chargement du retour:', error);
+                clearContent();
+                showNotification('Erreur lors du chargement du retour', 'error');
             }
         }
 
@@ -201,7 +319,7 @@
                 .map(([id, activity]) => ({
                     id,
                     ...activity,
-                    number: parseInt(activity.title.match(/\d+$/)?.[0] || '0')
+                    number: parseInt(activity.title?.match(/\d+$/)?.[0] || '0')
                 }))
                 .sort((a, b) => a.number - b.number);
             
@@ -217,7 +335,7 @@
                 .map(([id, activity]) => ({
                     id,
                     ...activity,
-                    number: parseInt(activity.title.match(/\d+$/)?.[0] || '0')
+                    number: parseInt(activity.title?.match(/\d+$/)?.[0] || '0')
                 }))
                 .sort((a, b) => a.number - b.number);
             
@@ -233,7 +351,7 @@
                 .map(([id, problem]) => ({
                     id,
                     ...problem,
-                    number: parseInt(problem.title.match(/\d+$/)?.[0] || '0')
+                    number: parseInt(problem.title?.match(/\d+$/)?.[0] || '0')
                 }))
                 .sort((a, b) => a.number - b.number);
             
@@ -283,33 +401,39 @@
 
                 const retoursRef = window.db.collection('users')
                     .doc(userId)
-                    .collection('retours');
+                    .collection('retours')
+                    .orderBy('1_date', 'desc');
 
-                const snapshot = await retoursRef.orderBy('1_date', 'desc').get();
+                const snapshot = await retoursRef.get();
                 
-                if (snapshot.empty) {
-                    retoursList.innerHTML += '<p class="no-retours">Aucun rapport disponible</p>';
-                    return;
-                }
-
-                const list = document.createElement('ul');
-                list.className = 'retours-list-items';
-
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     const li = document.createElement('li');
                     li.className = 'retour-item';
-                    li.textContent = data['2_title'] || `Retour du ${data['1_date']}`;
-                    li.onclick = () => {
-                        dateSelector.value = data['1_date'];
-                        loadRetourContent(data['1_date']);
+                    // Formater la date pour l'affichage
+                    const date = new Date(data['1_date']);
+                    const formattedDate = date.toLocaleDateString('fr-FR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
+                    
+                    li.textContent = data['2_title'].replace(/\d{4}-\d{2}-\d{2}/, formattedDate);
+                    li.onclick = async () => {
+                        // Mettre à jour le sélecteur de date
+                        const datePicker = document.getElementById('datePicker');
+                        const dateSelector = document.getElementById('dateSelector');
+                        
+                        datePicker.value = data['1_date'];
+                        dateSelector.value = formattedDate;
+                        
+                        await loadRetourContent(data['1_date']);
                     };
-                    list.appendChild(li);
+                    retoursList.appendChild(li);
                 });
-
-                retoursList.appendChild(list);
             } catch (error) {
                 console.error('Erreur lors du chargement de la liste des retours:', error);
+                showNotification('Erreur lors du chargement de la liste', 'error');
             }
         }
 

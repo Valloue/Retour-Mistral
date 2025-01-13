@@ -26,6 +26,16 @@
     margin-bottom: 8px;
     color: var(--text-secondary);
     font-size: 14px;
+<<<<<<< HEAD
+=======
+}
+
+.date-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+>>>>>>> e417f6c3d4e2b0201beca04cf8200410c557e845
 }
 
 .date-input {
@@ -33,16 +43,40 @@
     padding: 8px 12px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
+<<<<<<< HEAD
     background: var(--bg-secondary);
+=======
+>>>>>>> e417f6c3d4e2b0201beca04cf8200410c557e845
     color: var(--text-primary);
     cursor: pointer;
     transition: all 0.2s ease;
+    font-size: 14px;
+    background: var(--bg-secondary);
+    text-align: center;
 }
 
 .date-input:focus {
     outline: none;
-    border-color: #1a73e8;
-    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.1);
+}
+
+.date-input::before {
+    content: attr(data-formatted);
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-primary);
+    pointer-events: none;
+}
+
+.date-input-wrapper:hover .date-input {
+    border-color: var(--accent-color);
+}
+
+.date-input-wrapper:hover .calendar-icon {
+    color: var(--accent-color);
 }
 
 /* Style pour l'icône du calendrier */
@@ -321,4 +355,50 @@
 
 .btn-danger:hover {
     background: #c82333;
+}
+
+.calendar-icon {
+    pointer-events: none;
+    color: var(--text-secondary);
+    font-size: 16px;
+    opacity: 0.7;
+}
+
+.date-input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+/* Masquer le texte par défaut du input date sur Firefox */
+.date-input::-moz-calendar-picker-indicator {
+    opacity: 0;
+}
+
+/* Masquer le clear button sur Edge */
+.date-input::-ms-clear {
+    display: none;
+}
+
+.calendar-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.calendar-btn:hover {
+    background: var(--bg-hover);
+}
+
+.calendar-btn:hover .calendar-icon {
+    opacity: 1;
+    color: var(--accent-color);
 } 
