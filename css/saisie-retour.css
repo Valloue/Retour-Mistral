@@ -6,14 +6,14 @@
 
 .sidebar {
     width: 300px;
-    background: white;
+    background: var(--bg-secondary);
     padding: 20px;
-    border-right: 1px solid #dee2e6;
+    border-right: 1px solid var(--border-color);
     overflow-y: auto;
 }
 
 .section {
-    background: white;
+    background: var(--bg-secondary);
     border-radius: 12px;
     padding: 20px;
     margin-bottom: 20px;
@@ -22,7 +22,7 @@
 
 .section h2 {
     font-size: 1.1rem;
-    color: #202124;
+    color: var(--text-primary);
     margin-bottom: 16px;
     font-weight: 600;
 }
@@ -32,7 +32,7 @@
 }
 
 .activity-item {
-    background: white;
+    background: var(--bg-secondary);
     border-radius: 8px;
     padding: 12px 16px;
     margin-bottom: 10px;
@@ -77,8 +77,8 @@
 }
 
 .activity-item.active {
-    background: #e8f0fe;
-    border-left: 3px solid #4CAF50;
+    background: var(--accent-color);
+    color: white;
 }
 
 .add-btn {
@@ -101,22 +101,22 @@
     flex-grow: 1;
     padding: 20px;
     overflow-y: auto;
-    background: #f8f9fa;
+    background: var(--bg-primary);
 }
 
 .retour-title {
-    background: white;
+    background: var(--bg-secondary);
     padding: 15px 20px;
     margin-bottom: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     font-size: 1.2rem;
     font-weight: 500;
-    color: #202124;
+    color: var(--text-primary);
 }
 
 .editor {
-    background: white;
+    background: var(--bg-secondary);
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     overflow: hidden;
@@ -130,9 +130,9 @@
 }
 
 .editor-toolbar {
-    background: #f8f9fa;
+    background: var(--bg-primary);
     padding: 12px;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid var(--border-color);
     display: flex;
     gap: 8px;
 }
@@ -141,8 +141,8 @@
     padding: 8px 12px;
     border-radius: 6px;
     border: none;
-    background: white;
-    color: #5f6368;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -150,8 +150,8 @@
 }
 
 .editor-toolbar button:hover {
-    background: #f1f3f4;
-    color: #1a73e8;
+    background: var(--bg-primary);
+    color: var(--accent-color);
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
@@ -160,13 +160,13 @@
     min-height: 300px;
     line-height: 1.6;
     font-size: 15px;
-    color: #202124;
-    background: white;
+    color: var(--text-primary);
+    background: var(--bg-secondary);
 }
 
 .editable-content:focus {
     outline: none;
-    background: #fafafa;
+    background: var(--bg-secondary);
 }
 
 /* Styles pour les listes */
@@ -174,17 +174,20 @@
     list-style-type: disc;
     padding-left: 24px;
     margin: 12px 0;
+    color: var(--text-primary);
 }
 
 .editable-content ol {
     list-style-type: decimal;
     padding-left: 24px;
     margin: 12px 0;
+    color: var(--text-primary);
 }
 
 .editable-content li {
     margin-bottom: 8px;
     line-height: 1.5;
+    color: var(--text-primary);
 }
 
 /* Styles pour la modale */
@@ -206,7 +209,7 @@
 }
 
 .modal-content {
-    background-color: #fff;
+    background-color: var(--bg-secondary);
     padding: 24px;
     width: 90%;
     max-width: 500px;
@@ -239,7 +242,7 @@
 .modal-header h2 {
     margin: 0;
     font-size: 1.25rem;
-    color: #202124;
+    color: var(--text-primary);
     font-weight: 500;
 }
 
@@ -334,7 +337,7 @@
 }
 
 .context-menu {
-    background: white;
+    background: var(--bg-secondary);
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     padding: 8px 0;
@@ -344,13 +347,13 @@
 .menu-item {
     padding: 8px 16px;
     cursor: pointer;
-    color: #202124;
+    color: var(--text-primary);
     transition: all 0.2s ease;
 }
 
 .menu-item:hover {
-    background: #f1f3f4;
-    color: #1a73e8;
+    background: var(--bg-primary);
+    color: var(--accent-color);
 }
 
 .save-btn {
