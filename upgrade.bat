@@ -1,30 +1,19 @@
 @echo off
 echo ========================================
-echo    Mise a jour du projet sur GitHub
-echo ========================================
-echo.
-
-:: Vérifier s'il y a des modifications
-git status
-
-echo.
-echo ========================================
-echo    Ajout des fichiers modifies
+echo    Mise a jour de Git
 echo ========================================
 git add .
-
+git commit -m "Update"
 echo.
-set /p commit_message="Message du commit: "
-
-:: Créer le commit avec le message
-git commit -m "%commit_message%"
-
+echo ========================================
+echo    Pull depuis GitHub
+echo ========================================
+git pull origin main
 echo.
 echo ========================================
 echo    Push vers GitHub
 echo ========================================
 git push origin main
-
 echo.
 echo ========================================
 echo    Mise a jour terminee
