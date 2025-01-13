@@ -356,20 +356,6 @@
     color: var(--accent-color);
 }
 
-.save-btn {
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-left: 10px;
-}
-
-.save-btn:hover {
-    background-color: #45a049;
-}
-
 .activity-item:hover .delete-btn {
     opacity: 1;
 } 
