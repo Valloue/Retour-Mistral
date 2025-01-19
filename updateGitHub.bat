@@ -71,7 +71,10 @@ if not exist .git (
     git init
     git branch -M main
     echo.
-    echo Ajout du depot distant...
+    echo Suppression de l'ancien depot distant...
+    git remote remove origin
+    echo.
+    echo Ajout du nouveau depot distant...
     git remote add origin %remote_url%
     echo.
     echo Depot distant ajoute avec succes !
@@ -88,6 +91,13 @@ if not exist .git (
         git remote add origin %remote_url%
         echo.
         echo Depot distant ajoute avec succes !
+        echo.
+    ) else (
+        echo Mise a jour du depot distant...
+        git remote remove origin
+        set /p remote_url="Entrez le lien du depot GitHub: "
+        git remote add origin %remote_url%
+        echo Depot distant mis a jour avec succes !
         echo.
     )
 )
@@ -112,23 +122,9 @@ echo Creation du commit...
 git commit -m "%commit_msg%"
 echo.
 
-:: Pull avec l'option allow-unrelated-histories
-echo Recuperation des modifications distantes...
-git pull origin main --allow-unrelated-histories
-if errorlevel 1 (
-    echo Tentative de recuperation alternative...
-    git pull origin master --allow-unrelated-histories
-)
-echo.
-
-:: Push des modifications
+:: Push des modifications avec force
 echo Envoi des modifications vers GitHub...
-git push -u origin main
-if errorlevel 1 (
-    echo Tentative d'envoi alternative...
-    git branch -M main
-    git push -u origin main --force
-)
+git push -u origin main --force
 echo.
 
 :: Vérifier si tout s'est bien passé
@@ -157,7 +153,10 @@ echo ================================================
 echo.
 set /p remote_url="Entrez le lien du depot GitHub: "
 echo.
-echo Ajout du depot distant...
+echo Suppression de l'ancien depot distant...
+git remote remove origin
+echo.
+echo Ajout du nouveau depot distant...
 git remote add origin %remote_url%
 echo.
 echo Depot distant ajoute avec succes !
