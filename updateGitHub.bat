@@ -68,6 +68,20 @@ if not exist .git (
     echo.
     echo Depot distant ajoute avec succes !
     echo.
+) else (
+    :: Vérifier si origin existe déjà
+    git remote -v | findstr "origin" > nul
+    if errorlevel 1 (
+        echo Le depot distant n'est pas configure.
+        echo.
+        set /p remote_url="Entrez le lien du depot GitHub: "
+        echo.
+        echo Ajout du depot distant...
+        git remote add origin %remote_url%
+        echo.
+        echo Depot distant ajoute avec succes !
+        echo.
+    )
 )
 
 :: Vérifier la branche actuelle
