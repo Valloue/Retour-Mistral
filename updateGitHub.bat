@@ -14,11 +14,19 @@ echo q. Quitter
 echo.
 set /p choix="Choisissez une option (1-3 ou q pour quitter): "
 
+if not "%choix%"=="1" if not "%choix%"=="2" if not "%choix%"=="3" if not "%choix%"=="q" (
+    echo.
+    echo Option invalide. Veuillez choisir 1, 2, 3 ou q.
+    echo.
+    pause
+    cls
+    goto menu
+)
+
 if "%choix%"=="1" goto creer_depot
 if "%choix%"=="2" goto pousser_projet
 if "%choix%"=="3" goto lier_depot
 if "%choix%"=="q" goto fin
-goto menu
 
 :creer_depot
 cls
@@ -84,13 +92,6 @@ if not exist .git (
     )
 )
 
-:: Vérifier la branche actuelle
-for /f "tokens=* USEBACKQ" %%F in (`git rev-parse --abbrev-ref HEAD`) do set current_branch=%%F
-
-:: Utiliser la bonne branche pour les commandes
-echo Branch actuelle: %current_branch%
-echo.
-
 :: Vérifier si des modifications sont à commiter
 echo Verification des modifications...
 git status
@@ -114,11 +115,20 @@ echo.
 :: Pull avec l'option allow-unrelated-histories
 echo Recuperation des modifications distantes...
 git pull origin main --allow-unrelated-histories
+if errorlevel 1 (
+    echo Tentative de recuperation alternative...
+    git pull origin master --allow-unrelated-histories
+)
 echo.
 
 :: Push des modifications
 echo Envoi des modifications vers GitHub...
 git push -u origin main
+if errorlevel 1 (
+    echo Tentative d'envoi alternative...
+    git branch -M main
+    git push -u origin main --force
+)
 echo.
 
 :: Vérifier si tout s'est bien passé
@@ -136,6 +146,7 @@ if %errorlevel% neq 0 (
     echo ================================================
 )
 pause
+cls
 goto menu
 
 :lier_depot
@@ -152,6 +163,7 @@ echo.
 echo Depot distant ajoute avec succes !
 echo.
 pause
+cls
 goto menu
 
 :fin
