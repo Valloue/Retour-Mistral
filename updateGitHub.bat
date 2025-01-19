@@ -60,75 +60,45 @@ echo.
 
 :: Vérifier si le dépôt est initialisé
 if not exist .git (
-    echo Le depot Git n'est pas initialise.
-    echo Veuillez d'abord lier votre depot.
-    echo.
-    set /p remote_url="Entrez le lien du depot GitHub: "
-    echo.
-    echo Initialisation du depot Git...
     git init
     git branch -M main
-    echo.
-    echo Ajout du depot distant...
-    git remote add origin %remote_url%
-    echo.
-    echo Depot distant ajoute avec succes !
-    echo.
-) else (
-    echo Mise a jour du depot distant...
-    set /p remote_url="Entrez le lien du depot GitHub: "
-    echo.
-    git remote -v | findstr "origin" > nul
-    if not errorlevel 1 (
-        echo Suppression de l'ancien depot distant...
-        git remote remove origin
-        echo.
-    )
-    echo Ajout du nouveau depot distant...
-    git remote add origin %remote_url%
-    echo Depot distant mis a jour avec succes !
-    echo.
 )
 
-:: Vérifier si des modifications sont à commiter
-echo Verification des modifications...
-git status
+:: Configurer le remote
+echo Configuration du depot distant...
+set /p remote_url="Entrez le lien du depot GitHub: "
+git remote remove origin 2>nul
+git remote add origin %remote_url%
 echo.
 
-:: Demander un message de commit personnalisé
-set /p commit_msg="Message de commit (Enter pour 'Update'): "
-if "%commit_msg%"=="" set commit_msg=Update
-
-:: Ajouter les fichiers
-echo.
+:: Ajouter et commiter les modifications
 echo Ajout des fichiers...
 git add .
 echo.
 
-:: Créer le commit
 echo Creation du commit...
+set /p commit_msg="Message de commit (Enter pour 'Update'): "
+if "%commit_msg%"=="" set commit_msg=Update
 git commit -m "%commit_msg%"
 echo.
 
-:: Push des modifications avec force
+:: Push avec force
 echo Envoi des modifications vers GitHub...
 git push -u origin main --force
 echo.
 
-:: Vérifier si tout s'est bien passé
 if %errorlevel% neq 0 (
     color 0C
     echo ================================================
     echo                    ERREUR
     echo    La mise a jour n'a pas pu etre effectuee
     echo ================================================
-    pause
-    goto menu
 ) else (
     echo ================================================
     echo              MISE A JOUR REUSSIE
     echo ================================================
 )
+
 pause
 cls
 goto menu
