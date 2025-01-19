@@ -9,14 +9,13 @@ echo ================================================
 echo.
 echo 1. Creer un nouveau depot
 echo 2. Pousser votre projet sur GitHub
-echo 3. Lier votre depot local au depot GitHub
 echo q. Quitter
 echo.
-set /p choix="Choisissez une option (1-3 ou q pour quitter): "
+set /p choix="Choisissez une option (1-2 ou q pour quitter): "
 
-if not "%choix%"=="1" if not "%choix%"=="2" if not "%choix%"=="3" if not "%choix%"=="q" (
+if not "%choix%"=="1" if not "%choix%"=="2" if not "%choix%"=="q" (
     echo.
-    echo Option invalide. Veuillez choisir 1, 2, 3 ou q.
+    echo Option invalide. Veuillez choisir 1, 2 ou q.
     echo.
     pause
     cls
@@ -25,7 +24,6 @@ if not "%choix%"=="1" if not "%choix%"=="2" if not "%choix%"=="3" if not "%choix
 
 if "%choix%"=="1" goto creer_depot
 if "%choix%"=="2" goto pousser_projet
-if "%choix%"=="3" goto lier_depot
 if "%choix%"=="q" goto fin
 
 :creer_depot
@@ -87,6 +85,9 @@ if not exist .git (
         echo.
         set /p remote_url="Entrez le lien du depot GitHub: "
         echo.
+        echo Suppression de l'ancien depot distant...
+        git remote remove origin
+        echo.
         echo Ajout du depot distant...
         git remote add origin %remote_url%
         echo.
@@ -96,6 +97,11 @@ if not exist .git (
         echo Mise a jour du depot distant...
         git remote remove origin
         set /p remote_url="Entrez le lien du depot GitHub: "
+        echo.
+        echo Suppression de l'ancien depot distant...
+        git remote remove origin
+        echo.
+        echo Ajout du nouveau depot distant...
         git remote add origin %remote_url%
         echo Depot distant mis a jour avec succes !
         echo.
@@ -141,26 +147,6 @@ if %errorlevel% neq 0 (
     echo              MISE A JOUR REUSSIE
     echo ================================================
 )
-pause
-cls
-goto menu
-
-:lier_depot
-cls
-echo ================================================
-echo       LIAISON AVEC UN DEPOT GITHUB EXISTANT
-echo ================================================
-echo.
-set /p remote_url="Entrez le lien du depot GitHub: "
-echo.
-echo Suppression de l'ancien depot distant...
-git remote remove origin
-echo.
-echo Ajout du nouveau depot distant...
-git remote add origin %remote_url%
-echo.
-echo Depot distant ajoute avec succes !
-echo.
 pause
 cls
 goto menu
