@@ -1,0 +1,421 @@
+.container {
+    display: flex;
+    height: calc(100vh - 60px);
+    margin-top: 60px;
+    background: var(--bg-primary);
+}
+
+.sidebar {
+    width: 300px;
+    padding: 20px;
+    border-right: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    box-shadow: 2px 0 8px rgba(0,0,0,0.05);
+}
+
+.date-selector {
+    margin-bottom: 20px;
+    background: var(--bg-secondary);
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+}
+
+.date-selector label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.date-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.date-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    background: var(--bg-secondary);
+    text-align: center;
+}
+
+.date-input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.1);
+}
+
+.date-input::before {
+    content: attr(data-formatted);
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-primary);
+    pointer-events: none;
+}
+
+.date-input-wrapper:hover .date-input {
+    border-color: var(--accent-color);
+}
+
+.date-input-wrapper:hover .calendar-icon {
+    color: var(--accent-color);
+}
+
+/* Style pour l'icône du calendrier */
+.date-input::-webkit-calendar-picker-indicator {
+    filter: invert(var(--calendar-icon-invert));
+    cursor: pointer;
+}
+
+.main-content {
+    flex: 1;
+    padding: 20px;
+    background: var(--bg-primary);
+}
+
+.retour-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+}
+
+.retour-title span {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.content-sections {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.section {
+    padding: 20px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+}
+
+.section h2 {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 8px;
+}
+
+.activity-item {
+    margin-bottom: 16px;
+    padding: 16px;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.activity-item:hover {
+    background: var(--bg-primary);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.activity-title {
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.activity-content {
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.activity-content > p {
+    margin: 4px 0;
+}
+
+.activity-content ul {
+    margin: 12px 0;
+    padding-left: 24px;
+}
+
+.activity-content li {
+    margin-bottom: 8px;
+}
+
+.activity-content ul ul {
+    list-style-type: circle;
+    margin: 0;
+}
+
+.activity-content li {
+    margin: 2px 0;
+    padding: 0;
+}
+
+.activity-content ul ul li {
+    margin: 2px 0;
+}
+
+.retours-list {
+    margin-top: 20px;
+}
+
+.retours-list h3 {
+    font-size: 16px;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+}
+
+.no-retours {
+    color: #666;
+    font-style: italic;
+    padding: 10px 0;
+}
+
+.retours-list-items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.retour-item {
+    padding: 12px;
+    margin-bottom: 8px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+.retour-item:hover {
+    background: var(--bg-primary);
+    border-color: var(--accent-color);
+}
+
+.retour-item.active {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
+}
+
+.retour-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.action-btn {
+    background: none;
+    border: none;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+    background: #f1f3f4;
+    transform: translateY(-1px);
+}
+
+.copy-btn:hover {
+    color: #34A853;
+}
+
+.pdf-btn:hover {
+    color: #EA4335;
+}
+
+.delete-btn:hover {
+    color: #DC3545;
+}
+
+/* Styles pour les notifications */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 24px;
+    border-radius: 4px;
+    color: white;
+    font-weight: 500;
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: all 0.3s ease;
+    z-index: 2000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.notification.success {
+    background-color: #34A853;
+}
+
+.notification.error {
+    background-color: #EA4335;
+}
+
+.notification.info {
+    background-color: #1a73e8;
+}
+
+/* Ajouter ces styles pour la modale de suppression */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    padding: 24px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    margin-bottom: 16px;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #202124;
+    font-size: 1.25rem;
+}
+
+.modal-body {
+    margin-bottom: 24px;
+}
+
+.modal-body p {
+    margin: 8px 0;
+    color: #5f6368;
+}
+
+.modal-body p:last-child {
+    color: #dc3545;
+    font-size: 0.9rem;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+.calendar-icon {
+    pointer-events: none;
+    color: var(--text-secondary);
+    font-size: 16px;
+    opacity: 0.7;
+}
+
+.date-input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+/* Masquer le texte par défaut du input date sur Firefox */
+.date-input::-moz-calendar-picker-indicator {
+    opacity: 0;
+}
+
+/* Masquer le clear button sur Edge */
+.date-input::-ms-clear {
+    display: none;
+}
+
+.calendar-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.calendar-btn:hover {
+    background: var(--bg-hover);
+}
+
+.calendar-btn:hover .calendar-icon {
+    opacity: 1;
+    color: var(--accent-color);
+}
+
+.action-icon {
+    width: 20px;
+    height: 20px;
+    display: block;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.delete-icon {
+    width: 20px;
+    height: 20px;
+    display: block;
+}
+
+.delete-btn:hover .delete-icon {
+    content: url('../icon/poubelle_ouverte.png');
+}
+
+/* Supprimer ou commenter cette règle car nous n'utilisons plus la couleur */
+/* .delete-btn:hover {
+    color: #DC3545;
+} */ 

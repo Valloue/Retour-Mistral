@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retour Mistral - Inscription</title>
+    <link rel="icon" type="image/png" href="../icon/icone_site.png">
+    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/auth.css">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="auth-title">
+                    <img src="../icon/icone_site.png" alt="Logo Retour Mistral">
+                    <h1>Retour Mistral</h1>
+                </div>
+                <p>Créez votre compte</p>
+            </div>
+            <div class="auth-content">
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label for="username">Pseudo</label>
+                        <input type="text" id="username" class="form-input" placeholder="Choisissez un pseudo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" class="form-input" placeholder="Entrez votre email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Mot de passe</label>
+                        <input type="password" id="password" class="form-input" placeholder="Créez un mot de passe" required>
+                        <div class="password-requirements">
+                            <p id="length" class="requirement">10 caractères minimum</p>
+                            <p id="uppercase" class="requirement">1 majuscule</p>
+                            <p id="lowercase" class="requirement">1 minuscule</p>
+                            <p id="number" class="requirement">1 chiffre</p>
+                            <p id="special" class="requirement">1 caractère spécial</p>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirmer le mot de passe</label>
+                        <input type="password" id="confirmPassword" class="form-input" placeholder="Confirmez votre mot de passe" required>
+                    </div>
+                    <button type="submit" class="auth-btn">S'inscrire</button>
+                </form>
+                <div class="auth-links">
+                    <p>Déjà inscrit ? <a href="login.html">Se connecter</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEvK9CVWCmNGmOvHtwNnEJ65A_33JgSq0",
+            authDomain: "retour-mistral.firebaseapp.com",
+            projectId: "retour-mistral",
+            storageBucket: "retour-mistral.firebasestorage.app",
+            messagingSenderId: "663337089772",
+            appId: "1:663337089772:web:034e2446b73fa9701f03c9"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        window.auth = firebase.auth();
+        window.db = firebase.firestore();
+    </script>
+    <script>
+        // Fonction de validation du mot de passe
+        function validatePassword(password) {
+            const checks = {
+                length: password.length >= 10,
+                uppercase: /[A-Z]/.test(password),
+                lowercase: /[a-z]/.test(password),
+                number: /[0-9]/.test(password),
+                special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+            };
+
+            // Mettre à jour les indicateurs visuels
+            Object.keys(checks).forEach(check => {
+                const element = document.getElementById(`${check}-check`);
+                if (checks[check]) {
+                    element.textContent = '✅ ' + element.textContent.slice(2);
+                    element.classList.add('valid');
+                    element.classList.remove('invalid');
+                } else {
+                    element.textContent = '❌ ' + element.textContent.slice(2);
+                    element.classList.add('invalid');
+                    element.classList.remove('valid');
+                }
+            });
+
+            return Object.values(checks).every(check => check === true);
+        }
+
+        // Écouter les changements du mot de passe
+        const passwordInput = document.getElementById('password');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        const registerForm = document.getElementById('registerForm');
+
+        passwordInput.addEventListener('input', () => {
+            validatePassword(passwordInput.value);
+        });
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const username = document.getElementById('username').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const registerBtn = document.querySelector('.auth-btn');
+            registerBtn.classList.add('loading');
+
+            if (passwordInput.value !== confirmPasswordInput.value) {
+                alert('Les mots de passe ne correspondent pas');
+                registerBtn.classList.remove('loading');
+                return;
+            }
+
+            try {
+                const userCredential = await window.auth.createUserWithEmailAndPassword(email, passwordInput.value);
+                
+                await window.db.collection('users').doc(userCredential.user.uid).set({
+                    username: username,
+                    email: email,
+                    createdAt: new Date().toISOString()
+                });
+
+                window.location.href = 'saisie-retour.html';
+            } catch (error) {
+                console.error('Erreur lors de l\'inscription:', error);
+                let errorMessage = 'Erreur lors de l\'inscription.';
+                
+                switch (error.code) {
+                    case 'auth/email-already-in-use':
+                        errorMessage = 'Cet email est déjà utilisé.';
+                        break;
+                    case 'auth/invalid-email':
+                        errorMessage = 'Email invalide.';
+                        break;
+                    case 'auth/operation-not-allowed':
+                        errorMessage = 'L\'inscription est désactivée.';
+                        break;
+                    case 'auth/weak-password':
+                        errorMessage = 'Le mot de passe est trop faible.';
+                        break;
+                }
+                
+                alert(errorMessage);
+            } finally {
+                setTimeout(() => registerBtn.classList.remove('loading'), 500);
+            }
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retour Mistral - Mon Compte</title>
+    <link rel="icon" type="image/png" href="../icon/icone_site.png">
+    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/compte.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <img src="../icon/icone_site.png" alt="Logo Retour Mistral">
+            Retour Mistral
+        </div>
+        <div class="nav-links">
+            <a href="saisie-retour.html">Saisie Retour</a>
+            <a href="consultation.html">Consultation</a>
+            <a href="compte.html" class="active">Mon Compte</a>
+        </div>
+        <div class="theme-switch">
+            <span class="theme-icon">☀️</span>
+            <label class="switch">
+                <input type="checkbox" id="themeToggle" title="Basculer le thème clair/sombre" aria-label="Basculer le thème clair/sombre">
+                <span class="slider"></span>
+            </label>
+            <span class="theme-icon">🌙</span>
+        </div>
+        <button id="logoutBtn" class="logout-btn">Déconnexion</button>
+    </nav>
+
+    <div class="container">
+        <div class="account-container">
+            <div class="account-card">
+                <div class="account-header">
+                    <h1>Profil Utilisateur</h1>
+                    <p>Gérez vos informations personnelles</p>
+                </div>
+
+                <div class="account-content">
+                    <div class="form-section">
+                        <h2>Informations du compte</h2>
+                        <div class="form-group">
+                            <label for="username">Pseudo</label>
+                            <input type="text" id="username" class="form-input" disabled title="Pseudo de l'utilisateur" placeholder="Pseudo">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" class="form-input" disabled title="Adresse email de l'utilisateur" placeholder="Email">
+                        </div>
+                        <div class="form-group">
+                            <label for="createdAt">Date d'inscription</label>
+                            <input type="text" id="createdAt" class="form-input" disabled title="Date d'inscription de l'utilisateur" placeholder="Date d'inscription">
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-secondary" onclick="cancelEdit()" style="display: none;">Annuler</button>
+                            <button id="editBtn" class="btn btn-primary" onclick="toggleEditMode()">Modifier</button>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h2>Statistiques</h2>
+                        <div class="stats-card">
+                            <div class="stat-item">
+                                <span class="stat-label">Total des retours</span>
+                                <span class="stat-value" id="totalRetours">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Gestion du thème
+        const themeToggle = document.getElementById('themeToggle');
+        
+        // Charger la préférence de thème
+        const currentTheme = localStorage.getItem('theme');
+        if (currentTheme) {
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            themeToggle.checked = currentTheme === 'dark';
+        }
+        
+        // Gérer le changement de thème
+        themeToggle.addEventListener('change', function() {
+            if (this.checked) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'default');
+                localStorage.setItem('theme', 'default');
+            }
+        });
+
+        // Configuration Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEvK9CVWCmNGmOvHtwNnEJ65A_33JgSq0",
+            authDomain: "retour-mistral.firebaseapp.com",
+            projectId: "retour-mistral",
+            storageBucket: "retour-mistral.firebasestorage.app",
+            messagingSenderId: "663337089772",
+            appId: "1:663337089772:web:034e2446b73fa9701f03c9"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        window.auth = firebase.auth();
+        window.db = firebase.firestore();
+
+        // Charger les données de l'utilisateur
+        window.auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            try {
+                // Charger les données utilisateur
+                const userDoc = await window.db.collection('users').doc(user.uid).get();
+                const userData = userDoc.data();
+                
+                if (userData) {
+                    document.getElementById('username').value = userData.username || '';
+                    document.getElementById('email').value = user.email || '';
+                    document.getElementById('createdAt').value = new Date(userData.createdAt).toLocaleDateString();
+                    
+                    // Charger le nombre total de retours
+                    const retoursSnapshot = await window.db.collection('users')
+                        .doc(user.uid)
+                        .collection('retours')
+                        .get();
+                    
+                    document.getElementById('totalRetours').textContent = retoursSnapshot.size;
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des données:', error);
+                showNotification('Erreur lors du chargement des données', 'error');
+            }
+        });
+
+        // Gestion de la déconnexion
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            try {
+                await window.auth.signOut();
+                window.location.href = 'login.html';
+            } catch (error) {
+                console.error('Erreur lors de la déconnexion:', error);
+            }
+        });
+
+        async function updateProfile() {
+            const submitBtn = document.querySelector('.btn-primary');
+            submitBtn.classList.add('loading');
+            try {
+                const newUsername = document.getElementById('username').value.trim();
+                if (!newUsername) {
+                    showNotification('Le pseudo ne peut pas être vide', 'error');
+                    return;
+                }
+
+                const userId = window.auth.currentUser.uid;
+                await window.db.collection('users').doc(userId).update({
+                    username: newUsername,
+                    updatedAt: new Date().toISOString()
+                });
+
+                // Désactiver le mode édition
+                document.getElementById('username').disabled = true;
+                submitBtn.textContent = 'Modifier';
+                document.querySelector('.btn-secondary').style.display = 'none';
+
+                showNotification('Profil mis à jour avec succès');
+            } catch (error) {
+                console.error('Erreur:', error);
+                showNotification('Erreur lors de la mise à jour', 'error');
+            } finally {
+                setTimeout(() => submitBtn.classList.remove('loading'), 500);
+            }
+        }
+
+        function toggleEditMode() {
+            const usernameInput = document.getElementById('username');
+            const editBtn = document.querySelector('.btn-primary');
+            
+            if (usernameInput.disabled) {
+                // Activer le mode édition
+                usernameInput.disabled = false;
+                usernameInput.focus();
+                editBtn.textContent = 'Enregistrer';
+                document.querySelector('.btn-secondary').style.display = 'inline-block';
+            } else {
+                // Sauvegarder les modifications
+                updateProfile();
+            }
+        }
+
+        function cancelEdit() {
+            const usernameInput = document.getElementById('username');
+            const editBtn = document.querySelector('.btn-primary');
+            
+            usernameInput.disabled = true;
+            editBtn.textContent = 'Modifier';
+            document.querySelector('.btn-secondary').style.display = 'none';
+            
+            // Recharger les données originales
+            window.auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    const userDoc = await window.db.collection('users').doc(user.uid).get();
+                    const userData = userDoc.data();
+                    usernameInput.value = userData.username || '';
+                }
+            });
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Animation d'entrée
+            setTimeout(() => notification.classList.add('show'), 10);
+            
+            // Suppression automatique
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+    </script>
+    <script src="../js/theme.js"></script>
+</body>
+</html> 

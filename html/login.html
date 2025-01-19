@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retour Mistral - Connexion</title>
+    <link rel="icon" type="image/png" href="../icon/icone_site.png">
+    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/auth.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="auth-title">
+                    <img src="../icon/icone_site.png" alt="Logo Retour Mistral">
+                    <h1>Retour Mistral</h1>
+                </div>
+                <p>Connectez-vous à votre compte</p>
+            </div>
+            <div class="auth-content">
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" class="form-input" placeholder="Entrez votre email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Mot de passe</label>
+                        <input type="password" id="password" class="form-input" placeholder="Entrez votre mot de passe" required>
+                    </div>
+                    <button type="submit" class="auth-btn">Se connecter</button>
+                </form>
+                <div class="auth-links">
+                    <p>Pas encore de compte ? <a href="register.html">S'inscrire</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Initialisation Firebase -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEvK9CVWCmNGmOvHtwNnEJ65A_33JgSq0",
+            authDomain: "retour-mistral.firebaseapp.com",
+            projectId: "retour-mistral",
+            storageBucket: "retour-mistral.firebasestorage.app",
+            messagingSenderId: "663337089772",
+            appId: "1:663337089772:web:034e2446b73fa9701f03c9"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        window.auth = firebase.auth();
+    </script>
+
+    <!-- Logique de connexion -->
+    <script>
+        const loginForm = document.getElementById('loginForm');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.querySelector('.auth-btn');
+            loginBtn.classList.add('loading');
+
+            try {
+                await window.auth.signInWithEmailAndPassword(email, password);
+                window.location.href = 'saisie-retour.html';
+            } catch (error) {
+                console.error('Erreur de connexion:', error);
+                let errorMessage = 'Erreur de connexion.';
+                
+                switch (error.code) {
+                    case 'auth/invalid-email':
+                        errorMessage = 'Email invalide.';
+                        break;
+                    case 'auth/user-disabled':
+                        errorMessage = 'Ce compte a été désactivé.';
+                        break;
+                    case 'auth/user-not-found':
+                        errorMessage = 'Aucun compte trouvé avec cet email.';
+                        break;
+                    case 'auth/wrong-password':
+                        errorMessage = 'Mot de passe incorrect.';
+                        break;
+                }
+                
+                alert(errorMessage);
+            } finally {
+                setTimeout(() => loginBtn.classList.remove('loading'), 500);
+            }
+        });
+    </script>
+</body>
+</html> 

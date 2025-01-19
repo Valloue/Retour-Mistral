@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retour Mistral - Saisie Retour</title>
+    <link rel="icon" type="image/png" href="../icon/icone_site.png">
+    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/saisie-retour.css">
+    <script src="../js/theme.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <img src="../icon/icone_site.png" alt="Logo Retour Mistral">
+            Retour Mistral
+        </div>
+        <div class="nav-links">
+            <a href="saisie-retour.html" class="active">Saisie Retour</a>
+            <a href="consultation.html">Consultation</a>
+            <a href="compte.html">Mon Compte</a>
+        </div>
+        <div class="theme-switch">
+            <span class="theme-icon">☀️</span>
+            <label class="switch">
+                <input type="checkbox" id="themeToggle" aria-label="Basculer le thème clair/sombre">
+                <span class="slider"></span>
+            </label>
+            <span class="theme-icon">🌙</span>
+        </div>
+        <button id="logoutBtn" class="logout-btn">Déconnexion</button>
+    </nav>
+
+    <div class="container page-transition">
+        <div class="sidebar">
+            <div class="section">
+                <h2>Activités Matin</h2>
+                <div id="activitesMatin" class="activities-list"></div>
+                <button class="add-btn" data-section="matin">+ Ajouter une activité</button>
+            </div>
+
+            <div class="section">
+                <h2>Activités Après-midi</h2>
+                <div id="activitesApresMidi" class="activities-list"></div>
+                <button class="add-btn" data-section="apresMidi">+ Ajouter une activité</button>
+            </div>
+
+            <div class="section">
+                <h2>Problématiques</h2>
+                <div id="problematiques" class="activities-list"></div>
+                <button class="add-btn" data-section="problematiques">+ Ajouter une problématique</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div id="retourTitle" class="retour-title"></div>
+            <div id="editor" class="editor">
+                <p>Sélectionnez une activité pour commencer l'édition...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let saveTimeout = null;  // Déclarer la variable globalement
+
+        // Ajouter la fonction showNotification au début du script
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Animation d'entrée
+            setTimeout(() => notification.classList.add('show'), 10);
+            
+            // Suppression automatique
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Définir la fonction avant toute initialisation
+        function getUrlParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // Configuration Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEvK9CVWCmNGmOvHtwNnEJ65A_33JgSq0",
+            authDomain: "retour-mistral.firebaseapp.com",
+            projectId: "retour-mistral",
+            storageBucket: "retour-mistral.firebasestorage.app",
+            messagingSenderId: "663337089772",
+            appId: "1:663337089772:web:034e2446b73fa9701f03c9"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        window.auth = firebase.auth();
+        window.db = firebase.firestore();
+
+        // Vérification de l'authentification et chargement du retour
+        window.auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            try {
+                const dateParam = getUrlParameter('date');
+                // Forcer la date à aujourd'hui en UTC+1 (France)
+                const now = new Date();
+                const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+                    .toISOString()
+                    .split('T')[0];
+                
+                if (dateParam) {
+                    // Si une date est spécifiée, charger ce retour
+                    const retourDoc = await window.db.collection('users')
+                        .doc(user.uid)
+                        .collection('retours')
+                        .doc(dateParam)
+                        .get();
+
+                    if (retourDoc.exists) {
+                        const data = retourDoc.data();
+                        loadExistingRetour(data);
+                    }
+                } else {
+                    // Vérifier si un retour existe déjà pour aujourd'hui
+                    const todayRetourDoc = await window.db.collection('users')
+                        .doc(user.uid)
+                        .collection('retours')
+                        .doc(today)
+                        .get();
+                    
+                    if (todayRetourDoc.exists) {
+                        // Si un retour existe déjà, le charger
+                        loadExistingRetour(todayRetourDoc.data());
+                    } else {
+                        // Créer un nouveau retour pour aujourd'hui
+                        await createNewRetour(user.uid, today);
+                    }
+                }
+            } catch (error) {
+                console.error('Erreur lors de l\'initialisation:', error);
+                alert('Erreur lors de l\'initialisation de la page');
+            }
+        });
+
+        // Fonction pour charger un retour existant
+        function loadExistingRetour(data) {
+            document.getElementById('retourTitle').textContent = data['2_title'] || '';
+
+            // Charger les activités du matin
+            Object.entries(data['3_matin']?.activites || {}).forEach(([id, activity]) => {
+                addActivityToList('matin', { id, title: activity.title });
+            });
+
+            // Charger les activités de l'après-midi
+            Object.entries(data['4_apresMidi']?.activites || {}).forEach(([id, activity]) => {
+                addActivityToList('apresMidi', { id, title: activity.title });
+            });
+
+            // Charger les problématiques
+            Object.entries(data['5_problematiques']?.items || {}).forEach(([id, problem]) => {
+                addActivityToList('problematiques', { id, title: problem.title });
+            });
+        }
+
+        // Fonction pour créer un nouveau retour
+        async function createNewRetour(userId, date) {
+            try {
+                const userDoc = await window.db.collection('users').doc(userId).get();
+                const username = userDoc.data().username;
+                // Créer une date à partir du paramètre date
+                const currentDate = new Date();
+                const formattedDate = currentDate.toLocaleDateString('fr-FR', {
+                    day: '2-digit',
+                    month: '2-digit'
+                });
+                const retourTitle = `Retour ${username} ${formattedDate}`;
+
+                const newRetour = {
+                    '1_date': date,
+                    '2_title': retourTitle,
+                    '3_matin': { activites: {} },
+                    '4_apresMidi': { activites: {} },
+                    '5_problematiques': { items: {} }
+                };
+
+                await window.db.collection('users')
+                    .doc(userId)
+                    .collection('retours')
+                    .doc(date)
+                    .set(newRetour);
+
+                document.getElementById('retourTitle').textContent = retourTitle;
+                showNotification('Nouveau retour créé pour aujourd\'hui', 'success');
+            } catch (error) {
+                console.error('Erreur lors de la création du nouveau retour:', error);
+                showNotification('Erreur lors de la création du retour', 'error');
+            }
+        }
+
+        // Gestion de la déconnexion
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            try {
+                await window.auth.signOut();
+                window.location.href = 'login.html';
+            } catch (error) {
+                console.error('Erreur lors de la déconnexion:', error);
+            }
+        });
+
+        let currentSection = '';
+
+        // Modifier les fonctions liées aux boutons d'ajout
+        const addButtons = document.querySelectorAll('.add-btn');
+        addButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const section = button.dataset.section;
+                saveActivity(section);  // Appeler directement saveActivity avec la section
+            });
+        });
+
+        // Ajouter un Set pour stocker les mots personnalisés
+        const customDictionary = new Set();
+
+        // Modifier la fonction checkText
+        async function checkText(text) {
+            try {
+                const response = await fetch('https://api.languagetool.org/v2/check', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        'text': text,
+                        'language': 'fr',
+                        'enabledOnly': 'false'
+                    })
+                });
+
+                const data = await response.json();
+                
+                // Filtrer les corrections pour ignorer les mots du dictionnaire personnalisé
+                return data.matches.filter(match => {
+                    const word = text.slice(match.offset, match.offset + match.length);
+                    return !customDictionary.has(word.toLowerCase());
+                });
+            } catch (error) {
+                console.error('Erreur lors de la vérification du texte:', error);
+                return [];
+            }
+        }
+
+        // Ajouter une fonction pour gérer l'ajout de mots au dictionnaire
+        function addWordToDictionary(word) {
+            customDictionary.add(word.toLowerCase());
+            // Sauvegarder le dictionnaire dans le localStorage
+            localStorage.setItem('customDictionary', JSON.stringify([...customDictionary]));
+            showNotification(`"${word}" ajouté au dictionnaire`, 'info');
+        }
+
+        // Charger le dictionnaire personnalisé au démarrage
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedDictionary = localStorage.getItem('customDictionary');
+            if (savedDictionary) {
+                const words = JSON.parse(savedDictionary);
+                words.forEach(word => customDictionary.add(word));
+            }
+        });
+
+        // Ajouter un menu contextuel pour gérer les mots
+        document.addEventListener('contextmenu', (e) => {
+            const contentDiv = document.getElementById('activityContent');
+            if (contentDiv && contentDiv.contains(e.target)) {
+                const selection = window.getSelection();
+                const selectedText = selection.toString().trim();
+                
+                if (selectedText) {
+                    e.preventDefault();
+                    
+                    const contextMenu = document.createElement('div');
+                    contextMenu.className = 'context-menu';
+                    contextMenu.innerHTML = `
+                        <div class="menu-item" onclick="addWordToDictionary('${selectedText}')">
+                            Ajouter "${selectedText}" au dictionnaire
+                        </div>
+                    `;
+                    
+                    contextMenu.style.position = 'fixed';
+                    contextMenu.style.left = `${e.clientX}px`;
+                    contextMenu.style.top = `${e.clientY}px`;
+                    
+                    document.body.appendChild(contextMenu);
+                    
+                    // Fermer le menu au clic ailleurs
+                    const closeMenu = () => {
+                        if (contextMenu.parentNode) {
+                            contextMenu.parentNode.removeChild(contextMenu);
+                        }
+                        document.removeEventListener('click', closeMenu);
+                    };
+                    
+                    setTimeout(() => {
+                        document.addEventListener('click', closeMenu);
+                    }, 0);
+                }
+            }
+        });
+
+        // Modifier la fonction saveActivity pour prendre la section en paramètre
+        async function saveActivity(section) {
+            try {
+                const userId = window.auth.currentUser.uid;
+                const dateParam = getUrlParameter('date');
+                // Utiliser la date d'aujourd'hui si aucune date n'est spécifiée
+                const now = new Date();
+                const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+                    .toISOString()
+                    .split('T')[0];
+                const targetDate = dateParam || today;
+                const activityId = window.db.collection('_').doc().id;
+
+                const retourRef = window.db.collection('users')
+                    .doc(userId)
+                    .collection('retours')
+                    .doc(targetDate);
+
+                const retourDoc = await retourRef.get();
+                let data = retourDoc.exists ? retourDoc.data() : {
+                    '1_date': targetDate,
+                    '2_title': document.getElementById('retourTitle').textContent,
+                    '3_matin': { activites: {} },
+                    '4_apresMidi': { activites: {} },
+                    '5_problematiques': { items: {} }
+                };
+
+                // Générer le titre automatiquement selon la section
+                let title;
+                if (section === 'matin') {
+                    const count = Object.keys(data['3_matin']?.activites || {}).length + 1;
+                    title = `Activité matin ${count}`;
+                } else if (section === 'apresMidi') {
+                    const count = Object.keys(data['4_apresMidi']?.activites || {}).length + 1;
+                    title = `Activité après-midi ${count}`;
+                } else {
+                    const count = Object.keys(data['5_problematiques']?.items || {}).length + 1;
+                    title = `Problématique ${count}`;
+                }
+
+                // Ajouter la nouvelle activité
+                const newActivity = {
+                    title: title,
+                    content: '',
+                    createdAt: new Date().toISOString()
+                };
+
+                if (section === 'matin') {
+                    if (!data['3_matin']) data['3_matin'] = { activites: {} };
+                    data['3_matin'].activites[activityId] = newActivity;
+                } else if (section === 'apresMidi') {
+                    if (!data['4_apresMidi']) data['4_apresMidi'] = { activites: {} };
+                    data['4_apresMidi'].activites[activityId] = newActivity;
+                } else {
+                    if (!data['5_problematiques']) data['5_problematiques'] = { items: {} };
+                    data['5_problematiques'].items[activityId] = newActivity;
+                }
+
+                await retourRef.set(data);
+
+                addActivityToList(section, {
+                    id: activityId,
+                    title: title
+                });
+
+                showNotification('Activité créée avec succès');
+
+                // Sélectionner automatiquement la nouvelle activité
+                selectActivity(activityId);
+            } catch (error) {
+                console.error('Erreur lors de la création:', error);
+                showNotification('Erreur lors de la création', 'error');
+            }
+        }
+
+        // Ajouter l'event listener pour fermer la modale en cliquant en dehors
+        window.onclick = function(event) {
+            const modal = document.getElementById('newActivityModal');
+            if (event.target === modal) {
+                closeActivityModal();
+            }
+        }
+
+        function addActivityToList(section, activity) {
+            const listId = section === 'matin' ? 'activitesMatin' : 
+                           section === 'apresMidi' ? 'activitesApresMidi' : 
+                           'problematiques';
+            
+            const listElement = document.getElementById(listId);
+            if (!listElement) {
+                console.error(`Liste non trouvée pour la section: ${section}`);
+                return;
+            }
+
+            const div = document.createElement('div');
+            div.className = 'activity-item';
+            div.dataset.id = activity.id;
+
+            // Créer un conteneur pour le titre et le bouton
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'activity-item-content';
+
+            // Ajouter le titre
+            const titleSpan = document.createElement('span');
+            titleSpan.textContent = activity.title;
+            titleSpan.onclick = () => selectActivity(activity.id);
+
+            // Ajouter le bouton de suppression
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.innerHTML = '<img src="../icon/poubelle.png" alt="Supprimer" class="action-icon delete-icon">';
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                deleteActivity(activity.id, section);
+            };
+
+            // Assembler les éléments
+            contentDiv.appendChild(titleSpan);
+            contentDiv.appendChild(deleteBtn);
+            div.appendChild(contentDiv);
+            listElement.appendChild(div);
+        }
+
+        async function saveContentWithCorrection(contentDiv, updatePath, userId, dateParam) {
+            try {
+                // Utiliser la date d'aujourd'hui si aucune date n'est spécifiée
+                const now = new Date();
+                const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+                    .toISOString()
+                    .split('T')[0];
+                const targetDate = dateParam || today;
+
+                const update = {};
+                update[`${updatePath}.content`] = contentDiv.innerHTML;
+                update[`${updatePath}.updatedAt`] = new Date().toISOString();
+
+                await window.db.collection('users')
+                    .doc(userId)
+                    .collection('retours')
+                    .doc(targetDate)
+                    .update(update);
+                    
+            } catch (error) {
+                console.error('Erreur lors de la sauvegarde:', error);
+                showNotification('Erreur lors de la sauvegarde', 'error');
+            }
+        }
+
+        // Modifier la fonction selectActivity pour supprimer la sauvegarde automatique
+        async function selectActivity(activityId) {
+            try {
+                const userId = window.auth.currentUser.uid;
+                const dateParam = getUrlParameter('date');
+                // Utiliser la date d'aujourd'hui si aucune date n'est spécifiée
+                const now = new Date();
+                const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+                    .toISOString()
+                    .split('T')[0];
+                const targetDate = dateParam || today;
+                
+                const retourDoc = await window.db.collection('users')
+                    .doc(userId)
+                    .collection('retours')
+                    .doc(targetDate)
+                    .get();
+
+                if (!retourDoc.exists) return;
+
+                const data = retourDoc.data();
+                document.querySelectorAll('.activity-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+
+                const activityElement = document.querySelector(`[data-id="${activityId}"]`);
+                if (!activityElement) {
+                    console.error('Élément activité non trouvé:', activityId);
+                    return;
+                }
+                activityElement.classList.add('active');
+
+                let activityData;
+                let updatePath;
+
+                if (data['3_matin']?.activites?.[activityId]) {
+                    activityData = data['3_matin'].activites[activityId];
+                    updatePath = `3_matin.activites.${activityId}`;
+                } else if (data['4_apresMidi']?.activites?.[activityId]) {
+                    activityData = data['4_apresMidi'].activites[activityId];
+                    updatePath = `4_apresMidi.activites.${activityId}`;
+                } else if (data['5_problematiques']?.items?.[activityId]) {
+                    activityData = data['5_problematiques'].items[activityId];
+                    updatePath = `5_problematiques.items.${activityId}`;
+                }
+
+                if (!activityData) {
+                    console.error('Données activité non trouvées:', activityId);
+                    return;
+                }
+
+                const editor = document.getElementById('editor');
+                if (!editor) {
+                    console.error('Éditeur non trouvé');
+                    return;
+                }
+
+                editor.classList.add('loading');
+                editor.innerHTML = `
+                    <div class="editor-content">
+                        <div class="editor-toolbar">
+                            <button onclick="formatDoc('bold')" title="Gras">B</button>
+                            <button onclick="formatDoc('italic')" title="Italique">I</button>
+                            <button onclick="formatDoc('underline')" title="Souligné">U</button>
+                            <button onclick="formatDoc('insertunorderedlist')" title="Liste à puces">•</button>
+                            <button onclick="formatDoc('insertorderedlist')" title="Liste numérotée">1.</button>
+                        </div>
+                        <div id="activityContent" 
+                             class="editable-content" 
+                             contenteditable="true"
+                             data-update-path="${updatePath}"
+                        >${activityData.content || ''}</div>
+                    </div>
+                `;
+
+                // Réinitialiser les gestionnaires d'événements
+                window.formatDoc = function(cmd) {
+                    document.execCommand(cmd, false, null);
+                    document.getElementById('activityContent').focus();
+                };
+
+                const contentDiv = document.getElementById('activityContent');
+                if (!contentDiv) {
+                    console.error('Zone de contenu non trouvée');
+                    return;
+                }
+
+                // Ajouter un gestionnaire d'événements pour l'auto-sauvegarde
+                contentDiv.addEventListener('input', () => {
+                    if (typeof saveTimeout !== 'undefined') {
+                        if (saveTimeout) clearTimeout(saveTimeout);
+                    }
+                    
+                    saveTimeout = setTimeout(async () => {
+                        try {
+                            const dateParam = getUrlParameter('date');
+                            const now = new Date();
+                            const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+                                .toISOString()
+                                .split('T')[0];
+                            const targetDate = dateParam || today;
+
+                            const update = {};
+                            update[`${updatePath}.content`] = contentDiv.innerHTML;
+                            update[`${updatePath}.updatedAt`] = new Date().toISOString();
+
+                            await window.db.collection('users')
+                                .doc(userId)
+                                .collection('retours')
+                                .doc(targetDate)
+                                .update(update);
+                            
+                        } catch (error) {
+                            console.error('Erreur lors de la sauvegarde:', error);
+                            showNotification('Erreur lors de la sauvegarde', 'error');
+                        }
+                    }, 1000); // Sauvegarde 1 seconde après la dernière modification
+                });
+
+                setTimeout(() => editor.classList.remove('loading'), 500);
+            } catch (error) {
+                console.error('Erreur lors de la sélection:', error);
+                showNotification('Erreur lors de la sélection', 'error');
+            }
+        }
+
+        function formatDate(date) {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            return `${day}/${month}`;
+        }
+
+        // Ajouter la fonction correctContent
+        window.correctContent = async function() {
+            const contentDiv = document.getElementById('activityContent');
+            if (!contentDiv) return;
+
+            try {
+                // 1. Sauvegarder la mise en forme HTML
+                const htmlContent = contentDiv.innerHTML;
+                // 2. Obtenir le texte brut
+                const plainText = contentDiv.textContent;
+
+                // 3. Appeler l'API LanguageTool
+                const response = await fetch('https://api.languagetool.org/v2/check', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        'text': plainText,
+                        'language': 'fr-FR',
+                        'enabledOnly': 'false'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (!data.matches || data.matches.length === 0) {
+                    showNotification('Aucune correction nécessaire', 'info');
+                    return;
+                }
+
+                // 4. Créer une copie du texte pour les corrections
+                let correctedText = plainText;
+                let correctionCount = 0;
+
+                // 5. Appliquer les corrections de la fin vers le début
+                data.matches
+                    .filter(match => match.replacements && match.replacements.length > 0)
+                    .sort((a, b) => b.offset - a.offset) // De la fin vers le début
+                    .forEach(correction => {
+                        const word = plainText.substring(
+                            correction.offset,
+                            correction.offset + correction.length
+                        );
+
+                        // Ignorer les mots du dictionnaire personnalisé
+                        if (customDictionary.has(word.toLowerCase())) {
+                            return;
+                        }
+
+                        correctedText = correctedText.slice(0, correction.offset) +
+                                      correction.replacements[0].value +
+                                      correctedText.slice(correction.offset + correction.length);
+                        
+                        correctionCount++;
+                    });
+
+                // 6. Si des corrections ont été faites
+                if (correctionCount > 0) {
+                    // Remplacer le texte tout en préservant la mise en forme
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = htmlContent;
+                    
+                    // Remplacer uniquement le texte dans chaque nœud
+                    const replaceText = (node) => {
+                        if (node.nodeType === 3) { // Nœud texte
+                            const startIndex = plainText.indexOf(node.textContent);
+                            if (startIndex !== -1) {
+                                node.textContent = correctedText.substr(
+                                    startIndex,
+                                    node.textContent.length
+                                );
+                            }
+                        } else {
+                            Array.from(node.childNodes).forEach(replaceText);
+                        }
+                    };
+
+                    replaceText(tempDiv);
+                    contentDiv.innerHTML = tempDiv.innerHTML;
+
+                    showNotification(`${correctionCount} correction(s) appliquée(s)`, 'info');
+                } else {
+                    showNotification('Aucune correction nécessaire', 'info');
+                }
+
+            } catch (error) {
+                console.error('Erreur lors de la correction:', error);
+                showNotification('Erreur lors de la correction', 'error');
+            }
+        };
+
+        // Modifier la fonction deleteActivity
+        async function deleteActivity(activityId, section) {
+            try {
+                const userId = window.auth.currentUser.uid;
+                const dateParam = getUrlParameter('date');
+                // Utiliser la date d'aujourd'hui si aucune date n'est spécifiée
+                const now = new Date();
+                const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+                    .toISOString()
+                    .split('T')[0];
+                const targetDate = dateParam || today;
+
+                const retourRef = window.db.collection('users')
+                    .doc(userId)
+                    .collection('retours')
+                    .doc(targetDate);
+
+                const retourDoc = await retourRef.get();
+                if (!retourDoc.exists) return;
+
+                const data = retourDoc.data();
+                
+                // Supprimer l'activité selon la section
+                if (section === 'matin' && data['3_matin']?.activites) {
+                    delete data['3_matin'].activites[activityId];
+                } else if (section === 'apresMidi' && data['4_apresMidi']?.activites) {
+                    delete data['4_apresMidi'].activites[activityId];
+                } else if (section === 'problematiques' && data['5_problematiques']?.items) {
+                    delete data['5_problematiques'].items[activityId];
+                }
+
+                // Mettre à jour le document
+                await retourRef.set(data);
+
+                // Supprimer l'élément du DOM
+                const element = document.querySelector(`[data-id="${activityId}"]`);
+                if (element) {
+                    element.remove();
+                }
+
+                // Effacer l'éditeur si l'activité supprimée était sélectionnée
+                const editor = document.getElementById('editor');
+                if (element.classList.contains('active')) {
+                    editor.innerHTML = '<p>Sélectionnez une activité pour commencer l\'édition...</p>';
+                }
+
+                showNotification('Activité supprimée avec succès');
+            } catch (error) {
+                console.error('Erreur lors de la suppression:', error);
+                showNotification('Erreur lors de la suppression', 'error');
+            }
+        }
+
+        // Ajouter la fonction de sauvegarde manuelle
+        async function saveCurrentActivity() {
+            const contentDiv = document.getElementById('activityContent');
+            const saveBtn = document.querySelector('.save-btn');
+            saveBtn.classList.add('loading');
+            try {
+                const dateParam = getUrlParameter('date');
+                const now = new Date();
+                const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+                    .toISOString()
+                    .split('T')[0];
+                const targetDate = dateParam || today;
+
+                await saveContentWithCorrection(
+                    contentDiv,
+                    contentDiv.dataset.updatePath,
+                    window.auth.currentUser.uid,
+                    targetDate
+                );
+                showNotification('Activité sauvegardée avec succès');
+            } catch (error) {
+                console.error('Erreur lors de la sauvegarde:', error);
+                showNotification('Erreur lors de la sauvegarde', 'error');
+            } finally {
+                setTimeout(() => saveBtn.classList.remove('loading'), 500);
+            }
+        }
+    </script>
+</body>
+</html> 

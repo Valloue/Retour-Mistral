@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retour Mistral - Consultation</title>
+    <link rel="icon" type="image/png" href="../icon/icone_site.png">
+    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/consultation.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <img src="../icon/icone_site.png" alt="Logo Retour Mistral">
+            Retour Mistral
+        </div>
+        <div class="nav-links">
+            <a href="saisie-retour.html">Saisie Retour</a>
+            <a href="consultation.html" class="active">Consultation</a>
+            <a href="compte.html">Mon Compte</a>
+        </div>
+        <div class="theme-switch">
+            <span class="theme-icon">☀️</span>
+            <label class="switch" for="themeToggle">
+                <input type="checkbox" id="themeToggle" aria-label="Basculer le thème clair/sombre">
+                <span class="slider"></span>
+            </label>
+            <span class="theme-icon">🌙</span>
+        </div>
+        <button id="logoutBtn" class="logout-btn">Déconnexion</button>
+    </nav>
+
+    <div class="container page-transition">
+        <div class="sidebar">
+            <div class="date-selector">
+                <label for="dateSelector">Sélectionner une date</label>
+                <div class="date-input-wrapper">
+                    <input type="date" 
+                           id="datePicker" 
+                           style="display: none;">
+                    <input type="text" 
+                           id="dateSelector" 
+                           class="date-input" 
+                           pattern="\d{2}/\d{2}/\d{4}"
+                           placeholder="JJ/MM/AAAA"
+                           maxlength="10"
+                           readonly>
+                    <button type="button" class="calendar-btn">
+                        <span class="calendar-icon">📅</span>
+                    </button>
+                </div>
+            </div>
+            <div id="retoursList" class="retours-list"></div>
+        </div>
+
+        <div class="main-content">
+            <div class="retour-title">
+                <span id="retourTitle"></span>
+                <div class="retour-actions">
+                    <button class="action-btn copy-btn" title="Copier" onclick="copyRetour()">
+                        <img src="../icon/copier.png" alt="Copier" class="action-icon">
+                    </button>
+                    <button class="action-btn pdf-btn" title="Exporter en PDF" onclick="exportToPDF()">
+                        <img src="../icon/pdf.png" alt="PDF" class="action-icon">
+                    </button>
+                    <button class="action-btn delete-btn" title="Supprimer" onclick="deleteRetour()">
+                        <img src="../icon/poubelle.png" alt="Supprimer" class="action-icon delete-icon">
+                    </button>
+                </div>
+            </div>
+            <div class="content-sections">
+                <div class="section">
+                    <h2>Activités Matin</h2>
+                    <div id="activitesMatin" class="activities-list"></div>
+                </div>
+
+                <div class="section">
+                    <h2>Activités Après-midi</h2>
+                    <div id="activitesApresMidi" class="activities-list"></div>
+                </div>
+
+                <div class="section">
+                    <h2>Problématiques</h2>
+                    <div id="problematiques" class="activities-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Confirmation de suppression</h2>
+            </div>
+            <div class="modal-body">
+                <p>Voulez-vous vraiment supprimer ce rapport ?</p>
+                <p>Cette action est irréversible.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeDeleteModal()">Annuler</button>
+                <button class="btn btn-danger" onclick="confirmDelete()">Supprimer</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Gestion du thème
+            const themeToggle = document.getElementById('themeToggle');
+            
+            // Charger la préférence de thème
+            const currentTheme = localStorage.getItem('theme');
+            if (currentTheme) {
+                document.documentElement.setAttribute('data-theme', currentTheme);
+                themeToggle.checked = currentTheme === 'dark';
+            }
+            
+            // Gérer le changement de thème
+            themeToggle.addEventListener('change', function() {
+                if (this.checked) {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    document.documentElement.setAttribute('data-theme', 'default');
+                    localStorage.setItem('theme', 'default');
+                }
+            });
+        });
+
+        // Configuration Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEvK9CVWCmNGmOvHtwNnEJ65A_33JgSq0",
+            authDomain: "retour-mistral.firebaseapp.com",
+            projectId: "retour-mistral",
+            storageBucket: "retour-mistral.firebasestorage.app",
+            messagingSenderId: "663337089772",
+            appId: "1:663337089772:web:034e2446b73fa9701f03c9"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        window.auth = firebase.auth();
+        window.db = firebase.firestore();
+
+        // Vérification de l'authentification
+        window.auth.onAuthStateChanged((user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+            } else {
+                loadRetours();
+            }
+        });
+
+        // Gestion de la déconnexion
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            try {
+                await window.auth.signOut();
+                window.location.href = 'login.html';
+            } catch (error) {
+                console.error('Erreur lors de la déconnexion:', error);
+            }
+        });
+
+        // Ajouter cette fonction après la configuration Firebase
+        function formatDate(event) {
+            // Autoriser seulement les chiffres
+            if (!/[0-9]/.test(event.key)) {
+                event.preventDefault();
+                return false;
+            }
+
+            const input = event.target;
+            const value = input.value;
+            
+            // Ajouter automatiquement les tirets
+            if (value.length === 2 || value.length === 5) {
+                input.value = value + '-';
+            }
+
+            // Empêcher plus de 10 caractères
+            if (value.length >= 10) {
+                event.preventDefault();
+                return false;
+            }
+
+            return true;
+        }
+
+        // Ajouter après la fonction formatDate
+        function initDatePicker() {
+            const dateSelector = document.getElementById('dateSelector');
+            const datePicker = document.getElementById('datePicker');
+            const calendarBtn = document.querySelector('.calendar-btn');
+            
+            // Initialiser avec la date d'aujourd'hui
+            const today = new Date();
+            // Permettre la sélection jusqu'à la fin de l'année suivante
+            const maxDate = new Date(today.getFullYear() + 1, 11, 31);
+            datePicker.max = maxDate.toISOString().split('T')[0];
+            
+            // Formater la date pour l'affichage
+            const formattedToday = today.toLocaleDateString('fr-FR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+            
+            dateSelector.value = formattedToday;
+            datePicker.value = today.toISOString().split('T')[0];
+            
+            // Gérer le clic sur le bouton calendrier
+            calendarBtn.addEventListener('click', () => {
+                datePicker.showPicker();
+            });
+            
+            // Mettre à jour le champ texte quand une date est sélectionnée
+            datePicker.addEventListener('change', (e) => {
+                const selectedDate = new Date(e.target.value);
+                const formattedDate = selectedDate.toLocaleDateString('fr-FR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+                
+                dateSelector.value = formattedDate;
+                loadRetourContent(e.target.value);
+            });
+        }
+
+        // Modifier la fonction loadRetours
+        async function loadRetours() {
+            initDatePicker();
+            // Charger d'abord la liste des retours
+            await loadRetoursList();
+
+            try {
+                // Récupérer le dernier retour créé
+                const userId = window.auth.currentUser.uid;
+                const retoursRef = window.db.collection('users')
+                    .doc(userId)
+                    .collection('retours')
+                    .orderBy('1_date', 'desc')
+                    .limit(1);
+
+                const snapshot = await retoursRef.get();
+                
+                if (!snapshot.empty) {
+                    const lastRetour = snapshot.docs[0];
+                    // Mettre à jour le sélecteur de date
+                    const datePicker = document.getElementById('datePicker');
+                    const dateSelector = document.getElementById('dateSelector');
+                    
+                    const date = new Date(lastRetour.data()['1_date']);
+                    datePicker.value = lastRetour.data()['1_date'];
+                    dateSelector.value = date.toLocaleDateString('fr-FR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
+
+                    // Charger le contenu du dernier retour
+                    await loadRetourContent(lastRetour.data()['1_date']);
+                } else {
+                    // Si aucun retour n'existe, afficher un message
+                    clearContent();
+                    showNotification('Aucun retour disponible', 'info');
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement du dernier retour:', error);
+                showNotification('Erreur lors du chargement', 'error');
+            }
+        }
+
+        async function loadRetourContent(date) {
+            try {
+                // Vérifier si la date est valide
+                if (!date) {
+                    console.log('Date invalide');
+                    clearContent();
+                    return;
+                }
+
+                const mainContent = document.querySelector('.main-content');
+                mainContent.classList.add('loading');
+                const userId = window.auth.currentUser.uid;
+                const retourRef = window.db.collection('users')
+                    .doc(userId)
+                    .collection('retours')
+                    .doc(date);
+
+                const doc = await retourRef.get();
+                if (!doc.exists) {
+                    console.log('Aucun retour trouvé pour cette date');
+                    clearContent();
+                    return;
+                }
+
+                const data = doc.data();
+                displayRetourContent(data);
+                setTimeout(() => mainContent.classList.remove('loading'), 500);
+            } catch (error) {
+                console.error('Erreur lors du chargement du retour:', error);
+                clearContent();
+                showNotification('Erreur lors du chargement du retour', 'error');
+            }
+        }
+
+        function displayRetourContent(data) {
+            // Afficher le titre
+            document.getElementById('retourTitle').textContent = data['2_title'] || '';
+
+            // Afficher les activités du matin
+            const matinList = document.getElementById('activitesMatin');
+            matinList.innerHTML = '';
+            const matinActivities = Object.entries(data['3_matin']?.activites || {})
+                .map(([id, activity]) => ({
+                    id,
+                    ...activity,
+                    number: parseInt(activity.title?.match(/\d+$/)?.[0] || '0')
+                }))
+                .sort((a, b) => a.number - b.number);
+            
+            matinActivities.forEach(activity => {
+                const div = createActivityElement(activity);
+                matinList.appendChild(div);
+            });
+
+            // Afficher les activités de l'après-midi
+            const apresMidiList = document.getElementById('activitesApresMidi');
+            apresMidiList.innerHTML = '';
+            const apresMidiActivities = Object.entries(data['4_apresMidi']?.activites || {})
+                .map(([id, activity]) => ({
+                    id,
+                    ...activity,
+                    number: parseInt(activity.title?.match(/\d+$/)?.[0] || '0')
+                }))
+                .sort((a, b) => a.number - b.number);
+            
+            apresMidiActivities.forEach(activity => {
+                const div = createActivityElement(activity);
+                apresMidiList.appendChild(div);
+            });
+
+            // Afficher les problématiques
+            const problemesList = document.getElementById('problematiques');
+            problemesList.innerHTML = '';
+            const problematiques = Object.entries(data['5_problematiques']?.items || {})
+                .map(([id, problem]) => ({
+                    id,
+                    ...problem,
+                    number: parseInt(problem.title?.match(/\d+$/)?.[0] || '0')
+                }))
+                .sort((a, b) => a.number - b.number);
+            
+            problematiques.forEach(problem => {
+                const div = createActivityElement(problem);
+                problemesList.appendChild(div);
+            });
+        }
+
+        function createActivityElement(activity) {
+            const div = document.createElement('div');
+            div.className = 'activity-item';
+            
+            // Ajouter le titre comme texte normal au lieu d'un h3
+            const titleDiv = document.createElement('div');
+            titleDiv.className = 'activity-title';
+            titleDiv.textContent = activity.title;
+            div.appendChild(titleDiv);
+
+            // Ajouter le contenu
+            const content = document.createElement('div');
+            content.className = 'activity-content';
+            
+            if (!activity.content) {
+                div.appendChild(content);
+                return div;
+            }
+
+            content.innerHTML = activity.content;
+            div.appendChild(content);
+            return div;
+        }
+
+        function clearContent() {
+            document.getElementById('retourTitle').textContent = '';
+            document.getElementById('activitesMatin').innerHTML = '';
+            document.getElementById('activitesApresMidi').innerHTML = '';
+            document.getElementById('problematiques').innerHTML = '';
+        }
+
+        // Ajouter cette nouvelle fonction pour charger la liste des retours
+        async function loadRetoursList() {
+            try {
+                const userId = window.auth.currentUser.uid;
+                const retoursList = document.getElementById('retoursList');
+                retoursList.innerHTML = '<h3>Rapports existants</h3>';
+
+                const retoursRef = window.db.collection('users')
+                    .doc(userId)
+                    .collection('retours')
+                    .orderBy('1_date', 'desc');
+
+                const snapshot = await retoursRef.get();
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const li = document.createElement('li');
+                    li.className = 'retour-item';
+                    // Formater la date pour l'affichage
+                    const date = new Date(data['1_date']);
+                    const formattedDate = date.toLocaleDateString('fr-FR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
+                    
+                    li.textContent = data['2_title'].replace(/\d{4}-\d{2}-\d{2}/, formattedDate);
+                    li.onclick = async () => {
+                        // Mettre à jour le sélecteur de date
+                        const datePicker = document.getElementById('datePicker');
+                        const dateSelector = document.getElementById('dateSelector');
+                        
+                        datePicker.value = data['1_date'];
+                        dateSelector.value = formattedDate;
+                        
+                        await loadRetourContent(data['1_date']);
+                    };
+                    retoursList.appendChild(li);
+                });
+            } catch (error) {
+                console.error('Erreur lors du chargement de la liste des retours:', error);
+                showNotification('Erreur lors du chargement de la liste', 'error');
+            }
+        }
+
+        let currentDateToDelete = null;
+
+        function showDeleteModal(date) {
+            currentDateToDelete = date;
+            const modal = document.getElementById('deleteModal');
+            modal.style.display = 'flex';
+        }
+
+        function closeDeleteModal() {
+            const modal = document.getElementById('deleteModal');
+            modal.style.display = 'none';
+            currentDateToDelete = null;
+        }
+
+        async function deleteRetour() {
+            const datePicker = document.getElementById('datePicker');
+            showDeleteModal(document.getElementById('dateSelector').value);
+        }
+
+        async function confirmDelete() {
+            if (!currentDateToDelete) return;
+            
+            try {
+                // Convertir la date du format FR au format ISO
+                const [day, month, year] = currentDateToDelete.split('/');
+                const isoDate = `${year}-${month}-${day}`;
+                
+                const userId = window.auth.currentUser.uid;
+                await window.db.collection('users')
+                    .doc(userId)
+                    .collection('retours')
+                    .doc(isoDate)
+                    .delete();
+                
+                clearContent();
+                await loadRetoursList();
+                showNotification('Rapport supprimé avec succès');
+                closeDeleteModal();
+            } catch (error) {
+                console.error('Erreur lors de la suppression:', error);
+                showNotification('Une erreur est survenue', 'error');
+            }
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('deleteModal');
+            if (event.target === modal) {
+                closeDeleteModal();
+            }
+        }
+
+        async function copyRetour() {
+            try {
+                const retourTitle = document.getElementById('retourTitle').textContent;
+                let fullContent = `${retourTitle}\n\n`;
+
+                function formatSection(sectionId, sectionTitle) {
+                    let content = `${sectionTitle} :\n`;
+                    const activities = document.querySelectorAll(`#${sectionId} .activity-content`);
+                    
+                    activities.forEach(contentElement => {
+                        if (contentElement) {
+                            // Traiter le texte direct (hors listes)
+                            const directText = Array.from(contentElement.childNodes)
+                                .filter(node => node.nodeType === 3 && node.textContent.trim())
+                                .map(node => `\t- ${node.textContent.trim()}`)
+                                .join('\n');
+                            
+                            if (directText) {
+                                content += directText + '\n';
+                            }
+                            
+                            // Traiter les listes
+                            contentElement.querySelectorAll('ul').forEach(ul => {
+                                ul.querySelectorAll(':scope > li').forEach(li => {
+                                    content += `\t\t• ${li.textContent.trim()}\n`;
+                                });
+                            });
+                        }
+                    });
+                    
+                    return content + '\n';
+                }
+
+                // Ajouter chaque section
+                fullContent += formatSection('activitesMatin', 'Activités Matin');
+                fullContent += formatSection('activitesApresMidi', 'Activités Après-midi');
+                fullContent += formatSection('problematiques', 'Problématiques');
+
+                await navigator.clipboard.writeText(fullContent);
+                showNotification('Rapport copié dans le presse-papier');
+            } catch (error) {
+                console.error('Erreur lors de la copie:', error);
+                showNotification('Une erreur est survenue', 'error');
+            }
+        }
+
+        function formatSectionContent(title, element) {
+            if (!element) return '';
+            const activities = Array.from(element.getElementsByClassName('activity-item'));
+            const formattedActivities = activities.map(activity => {
+                const title = activity.querySelector('.activity-title').textContent;
+                const contentElement = activity.querySelector('.activity-content');
+                
+                let content = '';
+
+                // Ajouter d'abord le texte direct s'il existe
+                const directText = Array.from(contentElement.childNodes)
+                    .filter(node => node.nodeType === 3 && node.textContent.trim())
+                    .map(node => node.textContent.trim())
+                    .join('\n    ');
+                
+                if (directText) {
+                    content += `\n    ${directText}`;
+                }
+
+                // Traiter les listes
+                contentElement.querySelectorAll('ul:not(ul ul)').forEach(ul => {
+                    // Ne traiter que les listes de premier niveau
+                    const items = Array.from(ul.children).map(li => {
+                        // Récupérer uniquement le texte direct du li (sans les sous-listes)
+                        const directText = Array.from(li.childNodes)
+                            .filter(node => node.nodeType === 3)
+                            .map(node => node.textContent.trim())
+                            .join('');
+                        
+                        let itemText = `\n    • ${directText}`;
+                        
+                        // Traiter les sous-listes
+                        const subUl = li.querySelector('ul');
+                        if (subUl) {
+                            subUl.querySelectorAll(':scope > li').forEach(subLi => {
+                                itemText += `\n        ○ ${subLi.textContent.trim()}`;
+                            });
+                        }
+                        return itemText;
+                    });
+                    content += items.join('');
+                });
+
+                return `- ${title}${content}`;
+            }).join('\n\n');
+            
+            return formattedActivities;
+        }
+
+        function formatSectionForPDF(sectionId) {
+            const activities = document.querySelectorAll(`#${sectionId} .activity-item`);
+            let content = '';
+            
+            activities.forEach(activity => {
+                const activityContent = activity.querySelector('.activity-content');
+                if (!activityContent) return;
+
+                content += '<div class="activity-content">';
+                
+                // Traiter le texte direct et le contenu
+                let allText = '';
+                
+                // Récupérer tout le texte, y compris celui des balises div
+                function extractText(element) {
+                    Array.from(element.childNodes).forEach(node => {
+                        if (node.nodeType === 3) { // Nœud texte
+                            const text = node.textContent.trim();
+                            if (text) allText += text + ' ';
+                        } else if (node.nodeType === 1) { // Élément
+                            if (node.tagName.toLowerCase() !== 'ul') {
+                                extractText(node);
+                            }
+                        }
+                    });
+                }
+                
+                extractText(activityContent);
+                
+                if (allText.trim()) {
+                    content += `- ${allText.trim()}`;
+                }
+
+                // Traiter les listes
+                activityContent.querySelectorAll('ul').forEach(ul => {
+                    const items = Array.from(ul.children).map(li => {
+                        return `<br>• ${li.textContent.trim()}`;
+                    }).join('');
+                    content += items;
+                });
+
+                content += '</div>';
+            });
+            
+            return content;
+        }
+
+        function exportToPDF() {
+            try {
+                const pdfBtn = document.querySelector('.pdf-btn');
+                pdfBtn.classList.add('loading');
+                const printContent = document.createElement('div');
+                const retourTitle = document.getElementById('retourTitle').textContent;
+                
+                printContent.innerHTML = `
+                    <h1>${retourTitle}</h1>
+                    
+                    <h2>Activités Matin :</h2>
+                    ${formatSectionForPDF('activitesMatin')}
+                    
+                    <h2>Activités Après-midi :</h2>
+                    ${formatSectionForPDF('activitesApresMidi')}
+                    
+                    <h2>Problématiques :</h2>
+                    ${formatSectionForPDF('problematiques')}
+                `;
+
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(`
+                    <html>
+                    <head>
+                        <title>Rapport - ${retourTitle}</title>
+                        <style>
+                            body { 
+                                font-family: Arial, sans-serif; 
+                                padding: 20px;
+                                line-height: 1.6;
+                            }
+                            h1 { 
+                                color: #202124; 
+                                margin-bottom: 20px;
+                                font-size: 24px;
+                            }
+                            h2 { 
+                                color: #1a73e8; 
+                                margin: 20px 0 10px 0;
+                                font-size: 18px;
+                            }
+                            .activity-content {
+                                margin: 10px 0 20px 20px;
+                                padding-left: 20px;
+                                text-indent: -20px;
+                            }
+                            ul {
+                                margin: 5px 0 5px 20px;
+                                padding-left: 15px;
+                                list-style-type: none;
+                            }
+                            li {
+                                margin: 5px 0;
+                                text-indent: -15px;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        ${printContent.innerHTML}
+                    </body>
+                    </html>
+                `);
+
+                printWindow.document.close();
+                printWindow.focus();
+                
+                setTimeout(() => {
+                    printWindow.print();
+                    printWindow.close();
+                }, 250);
+            } catch (error) {
+                console.error('Erreur lors de l\'export PDF:', error);
+                showNotification('Une erreur est survenue', 'error');
+            } finally {
+                setTimeout(() => pdfBtn.classList.remove('loading'), 500);
+            }
+        }
+
+        // Ajouter cette fonction au début du script, juste après la configuration Firebase
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Animation d'entrée
+            setTimeout(() => notification.classList.add('show'), 10);
+            
+            // Suppression automatique
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+    </script>
+    <script src="../js/theme.js"></script>
+</body>
+</html> 
