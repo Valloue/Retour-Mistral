@@ -9,22 +9,20 @@ echo ================================================
 echo.
 echo 1. Creer un nouveau depot
 echo 2. Pousser votre projet sur GitHub
+echo 3. Verifier les conflits
+echo 4. Expliquer les conflits
+echo 5. Exporter le projet en ZIP
 echo q. Quitter
 echo.
-set /p choix="Choisissez une option (1-2 ou q pour quitter): "
-
-if not "%choix%"=="1" if not "%choix%"=="2" if not "%choix%"=="q" (
-    echo.
-    echo Option invalide. Veuillez choisir 1, 2 ou q.
-    echo.
-    pause
-    cls
-    goto menu
-)
+set /p choix="Choisissez une option (1-5 ou q pour quitter): "
 
 if "%choix%"=="1" goto creer_depot
 if "%choix%"=="2" goto pousser_projet
+if "%choix%"=="3" goto verifier_conflits
+if "%choix%"=="4" goto expliquer_conflits
+if "%choix%"=="5" goto exporter_zip
 if "%choix%"=="q" goto fin
+goto menu
 
 :creer_depot
 cls
@@ -101,6 +99,85 @@ if %errorlevel% neq 0 (
 
 pause
 cls
+goto menu
+
+:verifier_conflits
+cls
+echo ================================================
+echo          VERIFICATION DES CONFLITS
+echo ================================================
+echo.
+echo Verification des conflits potentiels...
+git fetch origin
+git merge-base --is-ancestor HEAD origin/main
+if %errorlevel% neq 0 (
+    echo Des conflits potentiels ont ete detectes !
+    git status
+) else (
+    echo Aucun conflit detecte.
+)
+pause
+goto menu
+
+:expliquer_conflits
+cls
+echo ================================================
+echo          EXPLICATION DES CONFLITS
+echo ================================================
+echo.
+echo Analyse des conflits...
+
+:: Vérifier si origin existe
+git remote -v | findstr "origin" > nul
+if %errorlevel% neq 0 (
+    echo Erreur: Aucun depot distant configure.
+    echo Veuillez d'abord configurer votre depot avec l'option 2.
+    pause
+    goto menu
+)
+
+git fetch origin
+git status | findstr "both modified:" > temp.txt
+if %errorlevel% neq 0 (
+    echo Aucun conflit detecte.
+) else (
+    echo Fichiers en conflit trouves :
+    echo.
+    type temp.txt
+    echo.
+    echo ------------------------------------------------
+    echo Comment lire les conflits :
+    echo.
+    echo 1. Les lignes entre <<<<<<< HEAD et =======
+    echo    sont vos modifications locales
+    echo.
+    echo 2. Les lignes entre ======= et >>>>>>>
+    echo    sont les modifications distantes
+    echo.
+    echo 3. Vous devez choisir quelles modifications garder
+    echo    ou comment les fusionner
+    echo.
+    echo Pour resoudre manuellement :
+    echo 1. Ouvrez les fichiers en conflit
+    echo 2. Cherchez les marqueurs <<<<<<< et >>>>>>>
+    echo 3. Editez le contenu comme souhaite
+    echo 4. Sauvegardez et faites un nouveau commit
+)
+del temp.txt 2>nul
+pause
+goto menu
+
+:exporter_zip
+cls
+echo ================================================
+echo          EXPORT DU PROJET EN ZIP
+echo ================================================
+echo.
+set /p nom_zip="Nom du fichier ZIP (sans extension): "
+echo Creation de l'archive %nom_zip%.zip...
+git archive --format=zip HEAD > "%nom_zip%.zip"
+echo Export termine avec succes !
+pause
 goto menu
 
 :fin
